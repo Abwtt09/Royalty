@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"
+    />
+    <link rel="modulepreload" href="assets/js/firebase-config.js" />
+    <link rel="modulepreload" href="assets/js/auth.js" />
+    <link rel="modulepreload" href="assets/js/firestore.js" />
+    <link rel="modulepreload" href="assets/js/i18n.js" />
+    <link rel="modulepreload" href="assets/js/ui.js?v=2" />
+    <title>إدارة البيانات · Royalty Real Estate</title>
+    <link rel="icon" href="assets/img/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/dashboard.css" />
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <div class="dashboard-header-split">
+          <div>
+            <h1 data-i18n="data.title"></h1>
+            <p data-i18n="data.description"></p>
+          </div>
+        </div>
+      </header>
+
+      <div class="data-grid">
+        <!-- ─── Import Panel ─── -->
+        <section class="form-section">
+          <div>
+            <p class="eyebrow" data-i18n="data.eyebrowImport"></p>
+            <h3 data-i18n="data.importTitle"></h3>
+            <p class="field-hint" data-i18n="data.importHint"></p>
+          </div>
+
+          <div
+            class="import-cols-hint"
+            id="importColsHint"
+            data-i18n="data.importCols"
+          ></div>
+
+          <div
+            class="import-drop-zone"
+            id="importDropZone"
+            role="button"
+            tabindex="0"
+          >
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              style="color: var(--ink-400)"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <p data-i18n="data.importAccept"></p>
+          </div>
+          <input
+            type="file"
+            id="importFileInput"
+            accept=".xlsx,.xls,.csv"
+            style="display: none"
+          />
+
+          <!-- Loading indicator -->
+          <div
+            id="importLoading"
+            style="display: none"
+            class="deed-extracting-bar"
+          >
+            <span
+              class="spinner"
+              style="
+                width: 1rem;
+                height: 1rem;
+                border-width: 2px;
+                flex-shrink: 0;
+              "
+            ></span>
+            <span data-i18n="common.loading"></span>
+          </div>
+
+          <!-- Row count badge -->
+          <p
+            id="importRowCount"
+            style="display: none; font-size: 0.8125rem; color: var(--ink-600)"
+          ></p>
+
+          <!-- Preview table -->
+          <div
+            id="importPreview"
+            class="import-preview"
+            style="display: none"
+          ></div>
+
+          <!-- Hint + confirm -->
+          <p
+            class="field-hint"
+            id="importMappingHint"
+            style="display: none"
+            data-i18n="data.mappingHint"
+          ></p>
+
+          <div
+            id="importActions"
+            style="display: none; gap: 0.75rem; flex-wrap: wrap"
+            class="form-actions"
+          >
+            <button
+              type="button"
+              class="btn btn-ghost"
+              id="importCancelBtn"
+              data-i18n="dashboard.cancel"
+            ></button>
+            <button type="button" class="btn btn-primary" id="importConfirmBtn">
+              <span
+                class="spinner hidden"
+                id="importSpinner"
+                style="width: 0.9rem; height: 0.9rem; border-width: 2px"
+              ></span>
+              <span
+                id="importConfirmLabel"
+                data-i18n="data.importConfirm"
+              ></span>
+            </button>
+          </div>
+
+          <p class="field-error hidden" id="importError"></p>
+        </section>
+
+        <!-- ─── Export Panel ─── -->
+        <section class="form-section">
+          <div>
+            <p class="eyebrow" data-i18n="data.eyebrowExport"></p>
+            <h3 data-i18n="data.exportTitle"></h3>
+          </div>
+
+          <!-- Filter selector -->
+          <div class="field-group">
+            <label class="field-label" data-i18n="data.filterLabel"></label>
+            <select class="field-select" id="exportFilter">
+              <option value="all" data-i18n="data.exportAll"></option>
+              <option
+                value="available"
+                data-i18n="map.filterAvailable"
+              ></option>
+              <option value="sold" data-i18n="map.filterSold"></option>
+              <option value="land" data-i18n="map.filterLand"></option>
+            </select>
+          </div>
+
+          <div class="export-options">
+            <button type="button" class="export-option-btn" id="exportExcelBtn">
+              <div class="export-icon">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 9h18M9 21V9" />
+                  <path d="M15 3v18" />
+                </svg>
+              </div>
+              <div>
+                <p class="export-label" data-i18n="data.exportExcel"></p>
+                <p class="export-sub">.xlsx</p>
+              </div>
+            </button>
+
+            <button type="button" class="export-option-btn" id="exportPdfBtn">
+              <div class="export-icon">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <line x1="10" y1="9" x2="8" y2="9" />
+                </svg>
+              </div>
+              <div>
+                <p class="export-label" data-i18n="data.exportPdf"></p>
+                <p class="export-sub">.pdf via print</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-option-btn"
+              id="exportGeoJsonBtn"
+            >
+              <div class="export-icon">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polygon
+                    points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"
+                  />
+                  <line x1="12" y1="22" x2="12" y2="15.5" />
+                  <polyline points="22 8.5 12 15.5 2 8.5" />
+                </svg>
+              </div>
+              <div>
+                <p class="export-label" data-i18n="boundary.exportGeoJson"></p>
+                <p class="export-sub">.geojson</p>
+              </div>
+            </button>
+
+            <button type="button" class="export-option-btn" id="exportKmlBtn">
+              <div class="export-icon">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path
+                    d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <p class="export-label" data-i18n="boundary.exportKml"></p>
+                <p class="export-sub">.kml / Google Earth</p>
+              </div>
+            </button>
+          </div>
+
+          <!-- Export status -->
+          <div
+            id="exportLoading"
+            style="display: none"
+            class="deed-extracting-bar"
+          >
+            <span
+              class="spinner"
+              style="
+                width: 1rem;
+                height: 1rem;
+                border-width: 2px;
+                flex-shrink: 0;
+              "
+            ></span>
+            <span data-i18n="common.loading"></span>
+          </div>
+          <p
+            id="exportDoneMsg"
+            style="display: none; font-size: 0.8125rem; color: var(--ink-600)"
+            data-i18n="data.exportDone"
+          ></p>
+        </section>
+      </div>
+      <!-- end .data-grid -->
+    </main>
+
+    <!-- SheetJS for Excel read/write -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <script type="module">
+      import {
+        initI18n,
+        applyTranslations,
+        t,
+        getLang,
+      } from "./assets/js/i18n.js";
+      import {setupDashboard, toast} from "./assets/js/dashboard-ui.js";
+      import {
+        listProperties,
+        importProperties,
+        logActivity,
+      } from "./assets/js/firestore.js";
+      import {escapeHtml} from "./assets/js/ui.js?v=2";
+      import {geoJSONToKML} from "./assets/js/boundary-utils.js";
+
+      initI18n();
+
+      let currentUserId = null;
+      let importedRows = []; // Parsed rows ready for import
+
+      /* ══════════════════════════════════════════
+         IMPORT SECTION
+      ══════════════════════════════════════════ */
+
+      const importDropZone = document.getElementById("importDropZone");
+      const importFileInput = document.getElementById("importFileInput");
+      const importLoading = document.getElementById("importLoading");
+      const importRowCount = document.getElementById("importRowCount");
+      const importPreview = document.getElementById("importPreview");
+      const importMappingHint = document.getElementById("importMappingHint");
+      const importActions = document.getElementById("importActions");
+      const importCancelBtn = document.getElementById("importCancelBtn");
+      const importConfirmBtn = document.getElementById("importConfirmBtn");
+      const importConfirmLabel = document.getElementById("importConfirmLabel");
+      const importSpinner = document.getElementById("importSpinner");
+      const importError = document.getElementById("importError");
+
+      importDropZone.addEventListener("click", () => importFileInput.click());
+      importDropZone.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") importFileInput.click();
+      });
+      importDropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        importDropZone.classList.add("drag-over");
+      });
+      importDropZone.addEventListener("dragleave", () =>
+        importDropZone.classList.remove("drag-over"),
+      );
+      importDropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        importDropZone.classList.remove("drag-over");
+        if (e.dataTransfer.files[0]) processImportFile(e.dataTransfer.files[0]);
+      });
+      importFileInput.addEventListener("change", (e) => {
+        if (e.target.files[0]) processImportFile(e.target.files[0]);
+        e.target.value = "";
+      });
+
+      function processImportFile(file) {
+        importError.classList.add("hidden");
+        importLoading.style.display = "flex";
+        importPreview.style.display = "none";
+        importActions.style.display = "none";
+        importRowCount.style.display = "none";
+        importMappingHint.style.display = "none";
+        importedRows = [];
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: "array"});
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonRows = XLSX.utils.sheet_to_json(sheet, {defval: ""});
+
+            if (!jsonRows.length) {
+              importLoading.style.display = "none";
+              importError.textContent = t("data.noRows");
+              importError.classList.remove("hidden");
+              return;
+            }
+
+            importedRows = jsonRows.map(mapRowToProperty).filter(Boolean);
+            importLoading.style.display = "none";
+            renderImportPreview(jsonRows.slice(0, 20));
+
+            importRowCount.textContent = `${importedRows.length} ${t("data.rowsLoaded")}`;
+            importRowCount.style.display = "block";
+            importMappingHint.style.display = "block";
+            importConfirmLabel.textContent = `${t("data.importConfirm")} (${importedRows.length})`;
+            importActions.style.display = "flex";
+          } catch (err) {
+            importLoading.style.display = "none";
+            importError.textContent =
+              t("data.importError") + ": " + err.message;
+            importError.classList.remove("hidden");
+          }
+        };
+        reader.onerror = () => {
+          importLoading.style.display = "none";
+          importError.textContent = t("data.importError");
+          importError.classList.remove("hidden");
+        };
+        reader.readAsArrayBuffer(file);
+      }
+
+      /** Map a raw spreadsheet row → Firestore property object. */
+      function mapRowToProperty(row) {
+        const titleAr = String(
+          row.title_ar || row["العنوان عربي"] || row["العنوان"] || "",
+        ).trim();
+        const titleEn = String(
+          row.title_en || row["Title"] || row["title"] || titleAr,
+        ).trim();
+        if (!titleAr && !titleEn) return null;
+
+        const price = parseFloat(row.price || row["السعر"] || 0) || 0;
+        const lat = parseFloat(row.lat || row["خط العرض"] || "") || undefined;
+        const lng = parseFloat(row.lng || row["خط الطول"] || "") || undefined;
+        const areaSize =
+          parseFloat(row.areaSize || row.area_size || row["المساحة"] || "") ||
+          undefined;
+        const locAr = String(row.location_ar || row["الموقع"] || "").trim();
+        const locEn = String(
+          row.location_en || row["Location"] || locAr,
+        ).trim();
+
+        const prop = {
+          title: {ar: titleAr, en: titleEn},
+          description: {ar: "", en: ""},
+          location: {ar: locAr, en: locEn},
+          type: (row.type || row["النوع"] || "land")
+            .toString()
+            .trim()
+            .toLowerCase(),
+          category: (row.category || row["الفئة"] || "land")
+            .toString()
+            .trim()
+            .toLowerCase(),
+          status: (row.status || row["الحالة"] || "available")
+            .toString()
+            .trim()
+            .toLowerCase(),
+          price,
+          currency: "OMR",
+          images: [],
+          tags: {ar: [], en: []},
+          featured: false,
+        };
+        if (areaSize) prop.areaSize = areaSize;
+        if (lat && lng) prop.coordinates = {lat, lng};
+        return prop;
+      }
+
+      function renderImportPreview(rows) {
+        const lang = getLang();
+        if (!rows.length) return;
+        const keys = Object.keys(rows[0]).slice(0, 8); // Show max 8 cols
+        const thead = `<thead><tr>${keys.map((k) => `<th>${escapeHtml(String(k))}</th>`).join("")}</tr></thead>`;
+        const tbody = `<tbody>${rows
+          .map(
+            (row) =>
+              `<tr>${keys.map((k) => `<td>${escapeHtml(String(row[k] ?? ""))}</td>`).join("")}</tr>`,
+          )
+          .join("")}</tbody>`;
+        importPreview.innerHTML = `<table>${thead}${tbody}</table>`;
+        importPreview.style.display = "block";
+      }
+
+      importCancelBtn.addEventListener("click", () => {
+        importedRows = [];
+        importPreview.style.display = "none";
+        importActions.style.display = "none";
+        importRowCount.style.display = "none";
+        importMappingHint.style.display = "none";
+        importError.classList.add("hidden");
+      });
+
+      importConfirmBtn.addEventListener("click", async () => {
+        if (!importedRows.length) return;
+        importConfirmBtn.disabled = true;
+        importSpinner.classList.remove("hidden");
+        importError.classList.add("hidden");
+        try {
+          const ids = await importProperties(importedRows, currentUserId);
+          await logActivity({
+            action: "imported",
+            targetType: "property",
+            userId: currentUserId,
+            meta: {count: ids.length},
+          });
+          toast(
+            `${t("data.importDone")} — ${ids.length} ${t("data.rowsLoaded")}`,
+          );
+          importCancelBtn.click(); // Reset UI
+        } catch (err) {
+          importError.textContent = t("data.importError") + ": " + err.message;
+          importError.classList.remove("hidden");
+        } finally {
+          importConfirmBtn.disabled = false;
+          importSpinner.classList.add("hidden");
+        }
+      });
+
+      /* ══════════════════════════════════════════
+         EXPORT SECTION
+      ══════════════════════════════════════════ */
+
+      const exportFilter = document.getElementById("exportFilter");
+      const exportLoading = document.getElementById("exportLoading");
+      const exportDoneMsg = document.getElementById("exportDoneMsg");
+
+      async function getFilteredProperties() {
+        const all = await listProperties();
+        const filter = exportFilter.value;
+        if (filter === "all") return all;
+        if (filter === "land") return all.filter((p) => p.type === "land");
+        return all.filter((p) => p.status === filter);
+      }
+
+      function propToExcelRow(p, lang) {
+        const tv = (v) =>
+          typeof v === "object" ? v?.[lang] || v?.ar || v?.en || "" : v || "";
+        return {
+          ID: p.id,
+          [t("data.colTitle")]: tv(p.title),
+          [t("data.colPrice")]: p.price || 0,
+          [t("data.colType")]: p.type || "",
+          [t("data.colStatus")]: p.status || "",
+          [t("data.colLocation")]: tv(p.location),
+          [t("data.colArea")]: p.areaSize || "",
+          Lat: p.coordinates?.lat || "",
+          Lng: p.coordinates?.lng || "",
+          createdAt: p.createdAt
+            ? new Date(p.createdAt).toLocaleDateString()
+            : "",
+        };
+      }
+
+      document
+        .getElementById("exportExcelBtn")
+        .addEventListener("click", async () => {
+          exportLoading.style.display = "flex";
+          exportDoneMsg.style.display = "none";
+          try {
+            const props = await getFilteredProperties();
+            const lang = getLang();
+            const rows = props.map((p) => propToExcelRow(p, lang));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Properties");
+            XLSX.writeFile(wb, `royalty-properties-${Date.now()}.xlsx`);
+            exportDoneMsg.style.display = "block";
+            setTimeout(() => {
+              exportDoneMsg.style.display = "none";
+            }, 3000);
+          } catch (err) {
+            toast(t("common.error") + ": " + err.message);
+          } finally {
+            exportLoading.style.display = "none";
+          }
+        });
+
+      document
+        .getElementById("exportPdfBtn")
+        .addEventListener("click", async () => {
+          exportLoading.style.display = "flex";
+          exportDoneMsg.style.display = "none";
+          try {
+            const props = await getFilteredProperties();
+            const lang = getLang();
+            const tv = (v) =>
+              typeof v === "object"
+                ? v?.[lang] || v?.ar || v?.en || "—"
+                : v || "—";
+
+            // Build a printable HTML page in a new window
+            const rows = props
+              .map(
+                (p) => `
+            <tr>
+              <td>${escapeHtml(tv(p.title))}</td>
+              <td class="num">${p.price ? Number(p.price).toLocaleString() : "—"} OMR</td>
+              <td>${escapeHtml(p.type || "—")}</td>
+              <td>${escapeHtml(p.status || "—")}</td>
+              <td>${escapeHtml(tv(p.location))}</td>
+              <td class="num">${p.areaSize ? Number(p.areaSize).toLocaleString() : "—"}</td>
+            </tr>`,
+              )
+              .join("");
+
+            const html = `<!doctype html><html dir="${lang === "ar" ? "rtl" : "ltr"}">
+            <head><meta charset="utf-8"/><title>Properties Report</title>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap"/>
+            <style>
+              body { font-family: 'IBM Plex Sans Arabic', system-ui; font-size: 12px; padding: 2rem; }
+              h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+              table { width: 100%; border-collapse: collapse; }
+              th, td { padding: 0.5rem 0.75rem; text-align: start; border-bottom: 1px solid #eee; }
+              th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .1em; color: #888; }
+              .num { font-variant-numeric: tabular-nums; direction: ltr; text-align: end; }
+              @media print { @page { margin: 1.5cm; } }
+            </style></head>
+            <body>
+              <h1>Royalty Real Estate — Properties Report</h1>
+              <p style="color:#888;font-size:11px;margin-bottom:1.5rem;">${new Date().toLocaleString()} · ${props.length} properties</p>
+              <table>
+                <thead><tr>
+                  <th>${escapeHtml(t("data.colTitle"))}</th>
+                  <th>${escapeHtml(t("data.colPrice"))}</th>
+                  <th>${escapeHtml(t("data.colType"))}</th>
+                  <th>${escapeHtml(t("data.colStatus"))}</th>
+                  <th>${escapeHtml(t("data.colLocation"))}</th>
+                  <th>${escapeHtml(t("data.colArea"))}</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </body></html>`;
+
+            const win = window.open("", "_blank");
+            if (win) {
+              win.document.write(html);
+              win.document.close();
+              win.onload = () => {
+                win.focus();
+                win.print();
+              };
+            }
+            exportDoneMsg.style.display = "block";
+            setTimeout(() => {
+              exportDoneMsg.style.display = "none";
+            }, 3000);
+          } catch (err) {
+            toast(t("common.error") + ": " + err.message);
+          } finally {
+            exportLoading.style.display = "none";
+          }
+        });
+
+      /* ─── GeoJSON export ─── */
+      document
+        .getElementById("exportGeoJsonBtn")
+        .addEventListener("click", async () => {
+          exportLoading.style.display = "flex";
+          exportDoneMsg.style.display = "none";
+          try {
+            const filterVal = document.getElementById("exportFilter").value;
+            const all = await listProperties(
+              filterVal && filterVal !== "all" ? {status: filterVal} : {},
+            );
+            const withBoundary = all.filter(
+              (p) => p.boundary && p.boundary.geometry,
+            );
+            const geojson = {
+              type: "FeatureCollection",
+              features: withBoundary.map((p) => ({
+                ...p.boundary,
+                properties: {
+                  id: p.id,
+                  title:
+                    typeof p.title === "object"
+                      ? p.title.en || p.title.ar
+                      : p.title,
+                  status: p.status,
+                  price: p.price,
+                  areaSize: p.areaSize,
+                },
+              })),
+            };
+            const blob = new Blob([JSON.stringify(geojson, null, 2)], {
+              type: "application/geo+json",
+            });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "properties.geojson";
+            a.click();
+            URL.revokeObjectURL(a.href);
+            exportDoneMsg.style.display = "block";
+            setTimeout(() => {
+              exportDoneMsg.style.display = "none";
+            }, 3000);
+          } catch (err) {
+            toast(t("common.error") + ": " + err.message);
+          } finally {
+            exportLoading.style.display = "none";
+          }
+        });
+
+      /* ─── KML export ─── */
+      document
+        .getElementById("exportKmlBtn")
+        .addEventListener("click", async () => {
+          exportLoading.style.display = "flex";
+          exportDoneMsg.style.display = "none";
+          try {
+            const filterVal = document.getElementById("exportFilter").value;
+            const all = await listProperties(
+              filterVal && filterVal !== "all" ? {status: filterVal} : {},
+            );
+            const withBoundary = all.filter(
+              (p) => p.boundary && p.boundary.geometry,
+            );
+            const placemarks = withBoundary
+              .map((p) => {
+                const name =
+                  typeof p.title === "object"
+                    ? p.title.en || p.title.ar || ""
+                    : p.title || "";
+                const ring = p.boundary.geometry.coordinates[0];
+                const coordStr = ring
+                  .map((c) => c[0] + "," + c[1] + ",0")
+                  .join("\n          ");
+                return `  <Placemark>
+    <name>${name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</name>
+    <ExtendedData>
+      <Data name="status"><value>${p.status || ""}</value></Data>
+      <Data name="price"><value>${p.price || ""} OMR</value></Data>
+    </ExtendedData>
+    <Polygon><outerBoundaryIs><LinearRing><coordinates>
+          ${coordStr}
+    </coordinates></LinearRing></outerBoundaryIs></Polygon>
+  </Placemark>`;
+              })
+              .join("\n");
+            const kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n${placemarks}\n</Document></kml>`;
+            const blob = new Blob([kml], {
+              type: "application/vnd.google-earth.kml+xml",
+            });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "properties.kml";
+            a.click();
+            URL.revokeObjectURL(a.href);
+            exportDoneMsg.style.display = "block";
+            setTimeout(() => {
+              exportDoneMsg.style.display = "none";
+            }, 3000);
+          } catch (err) {
+            toast(t("common.error") + ": " + err.message);
+          } finally {
+            exportLoading.style.display = "none";
+          }
+        });
+
+      /* ─── Bootstrap ─── */
+      (async () => {
+        const ctx = await setupDashboard("dashboard-data.html", {
+          require: "properties.create",
+        });
+        currentUserId = ctx.user.uid;
+        applyTranslations();
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script src="assets/js/animations.js"></script>
+  </body>
+</html>

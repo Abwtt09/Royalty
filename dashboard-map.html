@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"
+    />
+    <link rel="modulepreload" href="assets/js/firebase-config.js" />
+    <link rel="modulepreload" href="assets/js/auth.js" />
+    <link rel="modulepreload" href="assets/js/firestore.js" />
+    <link rel="modulepreload" href="assets/js/i18n.js" />
+    <link rel="modulepreload" href="assets/js/ui.js?v=2" />
+    <title>
+      &#1575;&#1604;&#1582;&#1585;&#1610;&#1591;&#1577; &middot; Royalty Real
+      Estate
+    </title>
+    <link rel="icon" href="assets/img/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/dashboard.css" />
+    <style>
+      .leaflet-pane {
+        z-index: 400;
+      }
+      .leaflet-top,
+      .leaflet-bottom {
+        z-index: 500;
+      }
+      .leaflet-popup-content-wrapper {
+        border-radius: 1rem !important;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18) !important;
+        padding: 0 !important;
+        overflow: hidden;
+      }
+      .leaflet-popup-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-width: 220px;
+      }
+      .leaflet-popup-tip-container {
+        margin-top: -1px;
+      }
+      .leaflet-control-zoom a {
+        font-family: system-ui;
+      }
+      .leaflet-tooltip {
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        font-family: "IBM Plex Sans Arabic", sans-serif;
+      }
+      .leaflet-tooltip::before {
+        display: none;
+      }
+
+      .map-popup {
+        font-family: "IBM Plex Sans Arabic", sans-serif;
+      }
+      .map-popup-img {
+        width: 100%;
+        height: 130px;
+        object-fit: cover;
+        display: block;
+        background: #e5e7eb;
+      }
+      .map-popup-img-placeholder {
+        width: 100%;
+        height: 80px;
+        background: linear-gradient(135deg, #1e293b, #334155);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .map-popup-body {
+        padding: 0.875rem 1rem;
+      }
+      .map-popup-title {
+        font-weight: 600;
+        font-size: 0.875rem;
+        margin: 0 0 0.25rem;
+        color: #0d0d0d;
+      }
+      .map-popup-meta {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin: 0;
+      }
+      .map-popup-price {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #0d0d0d;
+        margin: 0.375rem 0 0;
+      }
+      .map-popup-status {
+        display: inline-block;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        margin: 0.375rem 0 0;
+      }
+      .s-available {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      .s-sold {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+      .s-reserved {
+        background: #fef9c3;
+        color: #ca8a04;
+      }
+      .s-dev {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      .map-popup-link {
+        display: block;
+        margin: 0.625rem 0 0;
+        padding: 0.5rem;
+        background: #c6a24f;
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border-radius: 0.5rem;
+      }
+      .map-popup-link:hover {
+        background: #a8832d;
+      }
+
+      .map-layer-toggle {
+        position: absolute;
+        bottom: 2.5rem;
+        inset-inline-end: 1rem;
+        z-index: 600;
+        display: flex;
+        gap: 0.25rem;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 9999px;
+        padding: 0.25rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+      }
+      .map-layer-btn {
+        border: none;
+        background: transparent;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        cursor: pointer;
+        color: #374151;
+        font-family: inherit;
+        transition: background 0.15s;
+      }
+      .map-layer-btn.active {
+        background: #c6a24f;
+        color: #fff;
+      }
+
+      .map-count-badge {
+        position: absolute;
+        top: 1rem;
+        inset-inline-start: 1rem;
+        z-index: 600;
+        background: rgba(255, 255, 255, 0.95);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        border-radius: 9999px;
+        padding: 0.3125rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #374151;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar"></div>
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <div class="dashboard-header-split">
+          <div>
+            <p class="eyebrow" data-i18n="map.eyebrow"></p>
+            <h1 data-i18n="map.title"></h1>
+            <p data-i18n="map.description"></p>
+          </div>
+        </div>
+      </header>
+
+      <div class="map-page-wrap">
+        <div class="map-toolbar">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            style="color: var(--ink-400); flex-shrink: 0"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="search"
+            id="mapSearch"
+            data-i18n-placeholder="map.searchPlaceholder"
+          />
+          <div class="map-filter-group" id="mapFilters">
+            <button
+              class="map-filter-btn active"
+              data-filter="all"
+              data-i18n="map.filterAll"
+            ></button>
+            <button
+              class="map-filter-btn"
+              data-filter="available"
+              data-i18n="map.filterAvailable"
+            ></button>
+            <button
+              class="map-filter-btn"
+              data-filter="land"
+              data-i18n="map.filterLand"
+            ></button>
+            <button
+              class="map-filter-btn"
+              data-filter="sold"
+              data-i18n="map.filterSold"
+            ></button>
+          </div>
+        </div>
+
+        <div class="map-container" style="position: relative">
+          <div id="mapCanvas" class="map-canvas"></div>
+          <div class="map-count-badge" id="mapCountBadge">&#8212;</div>
+          <div class="map-layer-toggle" id="layerToggle">
+            <button
+              class="map-layer-btn active"
+              data-layer="street"
+              data-i18n="map.street"
+            ></button>
+            <button
+              class="map-layer-btn"
+              data-layer="satellite"
+              data-i18n="map.satellite"
+            ></button>
+          </div>
+        </div>
+
+        <div class="map-no-coords-note" id="noCoordsNote" style="display: none">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            style="flex-shrink: 0"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span data-i18n="map.noCoords"></span>
+          <span
+            id="noCoordsCount"
+            class="num"
+            style="margin-inline-start: 0.25rem; font-weight: 500"
+          ></span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Leaflet (global script, must be before the module) -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      crossorigin=""
+    ></script>
+
+    <script type="module">
+      import {
+        initI18n,
+        applyTranslations,
+        t,
+        getLang,
+        onLangChange,
+      } from "./assets/js/i18n.js";
+      import {setupDashboard} from "./assets/js/dashboard-ui.js";
+      import {watchProperties} from "./assets/js/firestore.js";
+      import {escapeHtml} from "./assets/js/ui.js?v=2";
+
+      /* ── i18n (instant — no network needed) ─────────────────────── */
+      initI18n();
+      applyTranslations();
+
+      /* ── Pure helpers ────────────────────────────────────────────── */
+
+      const STATUS_COLORS = {
+        available: "#16a34a",
+        reserved: "#d97706",
+        "under-development": "#2563eb",
+        sold: "#dc2626",
+        default: "#374151",
+      };
+      const sColor = (s) => STATUS_COLORS[s] || STATUS_COLORS.default;
+      const sCls = (s) =>
+        ({
+          available: "s-available",
+          sold: "s-sold",
+          reserved: "s-reserved",
+          "under-development": "s-dev",
+        })[s] || "";
+
+      function makeIcon(status) {
+        const c = sColor(status);
+        return L.divIcon({
+          html:
+            '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">' +
+            '<path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="' +
+            c +
+            '" opacity=".95"/>' +
+            '<circle cx="14" cy="14" r="5" fill="white" opacity=".9"/></svg>',
+          iconSize: [28, 36],
+          iconAnchor: [14, 36],
+          popupAnchor: [0, -36],
+          className: "",
+        });
+      }
+
+      const TYPE_LABELS = {
+        land: "أرض/Land",
+        villa: "فيلا/Villa",
+        building: "مبنى/Building",
+        commercial: "تجاري/Commercial",
+        apartment: "شقة/Apartment",
+        "mixed-use": "متعدد/Mixed-use",
+      };
+
+      function popupHtml(p) {
+        const lang = getLang();
+        const title =
+          typeof p.title === "object"
+            ? p.title[lang] || p.title.ar || p.title.en || "—"
+            : p.title || "—";
+        const location =
+          typeof p.location === "object"
+            ? p.location[lang] || p.location.ar || p.location.en || ""
+            : p.location || "";
+        const priceStr = p.price
+          ? Number(p.price).toLocaleString() + " OMR"
+          : "—";
+        const areaStr = p.areaSize
+          ? Number(p.areaSize).toLocaleString() +
+            " " +
+            (p.areaUnit === "m2" ? "m²" : p.areaUnit || "m²")
+          : "";
+        const typeStr = TYPE_LABELS[p.type] || p.type || "";
+        const shortId = p.id ? p.id.substring(0, 8).toUpperCase() : "";
+        const sLabels = {
+          available: "متاح / Available",
+          sold: "مُباع / Sold",
+          reserved: "محجوز / Reserved",
+          "under-development": "قيد التطوير / In Development",
+        };
+        const sLbl = sLabels[p.status] || p.status || "";
+
+        let boundaryAreaStr = "";
+        if (
+          p.boundary &&
+          p.boundary.geometry &&
+          p.boundary.geometry.coordinates
+        ) {
+          try {
+            const ring = p.boundary.geometry.coordinates[0];
+            if (ring && ring.length >= 3) {
+              const pts = ring
+                .slice(0, -1)
+                .map((c) => ({lat: c[1], lng: c[0]}));
+              const mLat = 111320;
+              const cLat = pts.reduce((s, pt) => s + pt.lat, 0) / pts.length;
+              const mLng = mLat * Math.cos((cLat * Math.PI) / 180);
+              let area = 0;
+              for (let i = 0; i < pts.length; i++) {
+                const j = (i + 1) % pts.length;
+                area += pts[i].lng * mLng * (pts[j].lat * mLat);
+                area -= pts[j].lng * mLng * (pts[i].lat * mLat);
+              }
+              area = Math.abs(area / 2);
+              if (area > 0)
+                boundaryAreaStr =
+                  area >= 1e6
+                    ? (area / 1e6).toFixed(3) + " km²"
+                    : area.toLocaleString("en", {maximumFractionDigits: 1}) +
+                      " m²";
+            }
+          } catch {}
+        }
+
+        const imgHtml =
+          p.images && p.images[0]
+            ? '<img class="map-popup-img" src="' +
+              escapeHtml(p.images[0]) +
+              '" alt="" loading="lazy" />'
+            : '<div class="map-popup-img-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>';
+
+        return (
+          '<div class="map-popup">' +
+          imgHtml +
+          '<div class="map-popup-body">' +
+          '<p class="map-popup-title">' +
+          escapeHtml(title) +
+          "</p>" +
+          (shortId
+            ? '<p class="map-popup-meta" style="font-family:monospace;font-size:.7rem;letter-spacing:.05em;margin-bottom:.25rem;"># ' +
+              shortId +
+              "</p>"
+            : "") +
+          (location
+            ? '<p class="map-popup-meta">📍 ' + escapeHtml(location) + "</p>"
+            : "") +
+          (typeStr
+            ? '<p class="map-popup-meta" style="margin-top:.2rem;">🏷 ' +
+              escapeHtml(typeStr) +
+              "</p>"
+            : "") +
+          '<p class="map-popup-price">💰 ' +
+          escapeHtml(priceStr) +
+          "</p>" +
+          (boundaryAreaStr
+            ? '<p class="map-popup-meta" style="margin-top:.25rem;">📐 ' +
+              escapeHtml(boundaryAreaStr) +
+              " (حدود الصك)</p>"
+            : areaStr
+              ? '<p class="map-popup-meta" style="margin-top:.25rem;">📐 ' +
+                escapeHtml(areaStr) +
+                "</p>"
+              : "") +
+          (sLbl
+            ? '<span class="map-popup-status ' +
+              sCls(p.status) +
+              '">' +
+              escapeHtml(sLbl) +
+              "</span>"
+            : "") +
+          (p.kmlUrl
+            ? '<a href="' +
+              escapeHtml(p.kmlUrl) +
+              '" target="_blank" rel="noopener" class="map-popup-link" style="background:#1e40af;">⬇ KML</a>'
+            : "") +
+          '<a href="dashboard-property-edit.html?id=' +
+          encodeURIComponent(p.id) +
+          '" class="map-popup-link">' +
+          t("map.viewDetails") +
+          " ←</a>" +
+          "</div></div>"
+        );
+      }
+
+      /* ── State ───────────────────────────────────────────────────── */
+      let allProperties = [];
+      let activeFilter = "all";
+      let searchQuery = "";
+
+      function matchesFilter(p) {
+        if (activeFilter === "available" && p.status !== "available")
+          return false;
+        if (activeFilter === "sold" && p.status !== "sold") return false;
+        if (activeFilter === "land" && p.type !== "land") return false;
+        if (searchQuery) {
+          const hay = [
+            typeof p.title === "object"
+              ? p.title.ar + " " + (p.title.en || "")
+              : p.title || "",
+            typeof p.location === "object"
+              ? p.location.ar + " " + (p.location.en || "")
+              : p.location || "",
+          ]
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(searchQuery.toLowerCase())) return false;
+        }
+        return true;
+      }
+
+      /* ── Map — initialise immediately (tiles need no auth) ───────── */
+      const map = L.map("mapCanvas", {
+        center: [22.5, 57.5],
+        zoom: 6,
+        zoomControl: true,
+      });
+
+      /* OSM default (reliable everywhere); satellite available on toggle */
+      const osmStreet = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        },
+      );
+      const esriSat = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {maxZoom: 20, attribution: "&copy; Esri, Maxar, Earthstar Geographics"},
+      );
+      const esriLbl = L.tileLayer(
+        "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+        {maxZoom: 20, attribution: "", pane: "overlayPane"},
+      );
+
+      osmStreet.addTo(map);
+      let currentLayer = "street";
+
+      /* Force Leaflet to measure the container after the browser paints */
+      requestAnimationFrame(() => map.invalidateSize());
+
+      const polygonLayer = L.featureGroup().addTo(map);
+      const markerLayer = L.featureGroup().addTo(map);
+      let initialFitDone = false;
+
+      /* ── Render ──────────────────────────────────────────────────── */
+      function inViewport(p) {
+        const vp = map.getBounds().pad(0.5);
+        if (p.boundary && p.boundary.geometry) {
+          try {
+            const b = L.geoJSON(p.boundary).getBounds();
+            return b.isValid() ? vp.intersects(b) : false;
+          } catch {
+            return false;
+          }
+        }
+        if (p.coordinates && p.coordinates.lat && p.coordinates.lng)
+          return vp.contains([p.coordinates.lat, p.coordinates.lng]);
+        return false;
+      }
+
+      function renderAll() {
+        polygonLayer.clearLayers();
+        markerLayer.clearLayers();
+
+        const filtered = allProperties.filter(matchesFilter);
+        const withLocation = filtered.filter(
+          (p) =>
+            (p.boundary && p.boundary.geometry) ||
+            (p.coordinates && p.coordinates.lat && p.coordinates.lng),
+        );
+        const withoutCoords = allProperties.filter(
+          (p) =>
+            !(p.boundary && p.boundary.geometry) &&
+            (!p.coordinates || !p.coordinates.lat || !p.coordinates.lng),
+        );
+
+        let polyCount = 0,
+          markCount = 0;
+        for (const p of withLocation) {
+          if (!inViewport(p)) continue;
+          if (p.boundary && p.boundary.geometry) {
+            polyCount++;
+            const fill = sColor(p.status);
+            const gl = L.geoJSON(p.boundary, {
+              style: {
+                color: fill,
+                weight: 2.5,
+                opacity: 0.9,
+                fillColor: fill,
+                fillOpacity: 0.18,
+              },
+            });
+            const lang = getLang();
+            const ttip =
+              typeof p.title === "object"
+                ? p.title[lang] || p.title.ar || ""
+                : p.title || "";
+            gl.bindPopup(popupHtml(p), {maxWidth: 280});
+            if (ttip) gl.bindTooltip(ttip, {sticky: true, opacity: 0.9});
+            polygonLayer.addLayer(gl);
+          } else if (p.coordinates && p.coordinates.lat && p.coordinates.lng) {
+            markCount++;
+            const mk = L.marker([p.coordinates.lat, p.coordinates.lng], {
+              icon: makeIcon(p.status),
+            });
+            mk.bindPopup(popupHtml(p), {maxWidth: 280});
+            markerLayer.addLayer(mk);
+          }
+        }
+
+        if (!initialFitDone && withLocation.length > 0) {
+          initialFitDone = true;
+          const all = L.featureGroup([
+            ...polygonLayer.getLayers(),
+            ...markerLayer.getLayers(),
+          ]);
+          if (all.getBounds().isValid())
+            map.fitBounds(all.getBounds(), {padding: [40, 40], maxZoom: 15});
+        }
+
+        const total = polyCount + markCount;
+        document.getElementById("mapCountBadge").textContent =
+          total > 0
+            ? total +
+              " " +
+              t("map.propertyCount") +
+              (polyCount
+                ? " · " + polyCount + " " + t("map.polygonsOnMap")
+                : "")
+            : "—";
+
+        const note = document.getElementById("noCoordsNote");
+        if (withoutCoords.length > 0) {
+          note.style.display = "flex";
+          document.getElementById("noCoordsCount").textContent =
+            "(" + withoutCoords.length + ")";
+        } else {
+          note.style.display = "none";
+        }
+      }
+
+      /* ── Map controls ────────────────────────────────────────────── */
+      let moveTimer;
+      map.on("moveend zoomend", () => {
+        clearTimeout(moveTimer);
+        moveTimer = setTimeout(renderAll, 180);
+      });
+
+      document.getElementById("layerToggle").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-layer]");
+        if (!btn) return;
+        const layer = btn.getAttribute("data-layer");
+        if (layer === currentLayer) return;
+        currentLayer = layer;
+        document
+          .querySelectorAll(".map-layer-btn")
+          .forEach((b) =>
+            b.classList.toggle(
+              "active",
+              b.getAttribute("data-layer") === layer,
+            ),
+          );
+        if (layer === "satellite") {
+          map.removeLayer(osmStreet);
+          esriSat.addTo(map);
+          esriLbl.addTo(map);
+        } else {
+          map.removeLayer(esriSat);
+          map.removeLayer(esriLbl);
+          osmStreet.addTo(map);
+        }
+      });
+
+      document.getElementById("mapFilters").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-filter]");
+        if (!btn) return;
+        document
+          .querySelectorAll(".map-filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = btn.getAttribute("data-filter");
+        renderAll();
+      });
+
+      let srchTimer;
+      document.getElementById("mapSearch").addEventListener("input", (e) => {
+        clearTimeout(srchTimer);
+        srchTimer = setTimeout(() => {
+          searchQuery = e.target.value.trim();
+          renderAll();
+        }, 250);
+      });
+
+      onLangChange(() => {
+        renderAll();
+        applyTranslations();
+      });
+
+      /* ── Load property data immediately (public Firestore rule) ──── */
+      watchProperties((props) => {
+        allProperties = props;
+        renderAll();
+      });
+
+      /* ── Auth + sidebar (runs in parallel, doesn't block the map) ── */
+      setupDashboard("dashboard-map.html", {require: "view"})
+        .then(() => {
+          applyTranslations();
+          /* Fix map size after sidebar changes the layout */
+          map.invalidateSize();
+        })
+        .catch((err) => {
+          /* Auth failed or permission denied — setupDashboard already handles redirect */
+          console.warn("[map] setupDashboard:", err.message);
+        });
+    </script>
+  </body>
+</html>

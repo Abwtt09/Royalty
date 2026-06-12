@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.cloudinary.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js" />
+    <link rel="modulepreload" href="assets/js/firebase-config.js" />
+    <link rel="modulepreload" href="assets/js/auth.js" />
+    <link rel="modulepreload" href="assets/js/firestore.js" />
+    <link rel="modulepreload" href="assets/js/i18n.js" />
+    <link rel="modulepreload" href="assets/js/ui.js?v=2" />
+    <title>دخول · Royalty Real Estate</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" href="assets/img/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+  </head>
+  <body>
+    <div class="login-layout">
+      <div class="login-panel">
+        <a href="index.html" class="logo">
+          <img src="assets/img/logo.png" alt="" class="logo-mark">
+          <span class="logo-text">
+            <span class="logo-name">الملكية للإستثمار</span>
+            <span class="logo-tagline">وساطة · تطوير · تأمين · استثمارات</span>
+          </span>
+        </a>
+
+        <div class="login-form-wrap">
+          <p class="eyebrow mb-4" data-i18n="login.eyebrow"></p>
+          <h1 data-i18n="login.title"></h1>
+          <p data-i18n="login.description"></p>
+
+          <form class="login-form" id="loginForm">
+            <div class="field-group">
+              <label class="field-label" data-i18n="login.email"></label>
+              <input
+                class="field-input"
+                type="text"
+                name="username"
+                autocomplete="username"
+                required
+                dir="ltr"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                data-i18n-placeholder="login.emailPlaceholder"
+              />
+            </div>
+            <div class="field-group">
+              <label class="field-label" data-i18n="login.password"></label>
+              <input
+                class="field-input"
+                type="password"
+                name="password"
+                autocomplete="current-password"
+                required
+                placeholder="••••••••"
+              />
+            </div>
+            <p class="field-error hidden" id="loginError"></p>
+            <button type="submit" class="btn btn-primary btn-lg" id="signinBtn">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span id="signinLabel" data-i18n="login.continue"></span>
+            </button>
+          </form>
+
+          <p
+            style="margin-top: 2rem; font-size: 0.75rem; color: var(--ink-500)"
+          >
+            <span data-i18n="login.need"></span>
+            <span
+              style="color: var(--ink-900)"
+              data-i18n="login.contactStudio"
+            ></span>
+          </p>
+        </div>
+
+        <p style="font-size: 0.75rem; color: var(--ink-400)">
+          © <span class="num"></span> Royalty
+        </p>
+      </div>
+
+      <div class="login-image">
+        <div class="login-image-text">
+          <p data-i18n="login.quote"></p>
+          <small data-i18n="login.principle"></small>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {initI18n, t} from "./assets/js/i18n.js";
+      import {signIn, subscribeAuth} from "./assets/js/auth.js";
+      import {clearCachedProfile} from "./assets/js/profile-cache.js";
+
+      initI18n();
+      // Visiting login = previous session is done. Drop the cached profile.
+      clearCachedProfile();
+      document.querySelector("p .num").textContent = new Date().getFullYear();
+
+      // redirect away if already signed in
+      subscribeAuth((user) => {
+        if (user) window.location.replace("index.html");
+      });
+
+      const form = document.getElementById("loginForm");
+      const error = document.getElementById("loginError");
+      const btn = document.getElementById("signinBtn");
+      const label = document.getElementById("signinLabel");
+
+      // Surface error from sessionStorage (set by setupDashboard when the user
+      // is auth'd but has no profile in Firestore).
+      const pending = sessionStorage.getItem("royalty.loginError") || sessionStorage.getItem("virea.loginError");
+      if (pending) {
+        error.textContent = pending;
+        error.style.whiteSpace = "pre-line";
+        error.classList.remove("hidden");
+        sessionStorage.removeItem("royalty.loginError");
+        sessionStorage.removeItem("virea.loginError");
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        error.classList.add("hidden");
+        btn.setAttribute("disabled", "");
+        label.textContent = t("login.signing");
+        try {
+          await signIn(
+            form.elements.username.value,
+            form.elements.password.value,
+          );
+          window.location.replace("index.html");
+        } catch (err) {
+          error.textContent = err.code?.startsWith('auth/') ? t("login.failed") : (err.message || t("login.failed"));
+          error.classList.remove("hidden");
+          btn.removeAttribute("disabled");
+          label.textContent = t("login.continue");
+        }
+      });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script src="assets/js/animations.js"></script>
+  </body>
+</html>

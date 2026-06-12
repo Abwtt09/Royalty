@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://firestore.googleapis.com"
+      crossorigin
+    />
+    <link rel="dns-prefetch" href="https://api.cloudinary.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"
+    />
+    <link rel="modulepreload" href="assets/js/firebase-config.js" />
+    <link rel="modulepreload" href="assets/js/auth.js" />
+    <link rel="modulepreload" href="assets/js/firestore.js" />
+    <link rel="modulepreload" href="assets/js/i18n.js" />
+    <link rel="modulepreload" href="assets/js/ui.js?v=2" />
+    <title>إدارة العقارات · الملكية للإستثمار</title>
+    <link rel="icon" href="assets/img/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/dashboard.css" />
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header dashboard-header-split">
+        <div>
+          <p class="eyebrow" data-i18n="properties.eyebrow"></p>
+          <h1 data-i18n="dashboard.properties"></h1>
+        </div>
+        <a
+          href="dashboard-property-edit.html"
+          class="btn btn-primary"
+          data-role-require="properties.create"
+          data-i18n="dashboard.newProperty"
+        ></a>
+      </header>
+
+      <!-- ── Filters ── -->
+      <div class="prop-filters">
+        <div class="prop-filters-top">
+          <div
+            class="dashboard-toolbar"
+            style="flex: 1; min-width: 13rem; max-width: 24rem"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              id="searchInput"
+              type="search"
+              data-i18n-placeholder="dashboard.searchProperties"
+            />
+          </div>
+          <select id="typeFilter" class="prop-filter-select">
+            <option value="all" data-i18n="dashboard.filterAllTypes">
+              جميع الأنواع
+            </option>
+            <option value="land" data-i18n="properties.typeLand"></option>
+            <option value="villa" data-i18n="properties.typeVilla"></option>
+            <option
+              value="building"
+              data-i18n="properties.typeBuilding"
+            ></option>
+            <option
+              value="commercial"
+              data-i18n="properties.typeCommercial"
+            ></option>
+            <option
+              value="apartment"
+              data-i18n="properties.typeApartment"
+            ></option>
+            <option
+              value="mixed-use"
+              data-i18n="properties.typeMixedUse"
+            ></option>
+          </select>
+          <select id="categoryFilter" class="prop-filter-select">
+            <option value="all">الفئات</option>
+            <option
+              value="residential"
+              data-i18n="properties.categoryResidential"
+            ></option>
+            <option
+              value="commercial"
+              data-i18n="properties.categoryCommercial"
+            ></option>
+            <option value="land" data-i18n="properties.categoryLand"></option>
+            <option
+              value="mixed-use"
+              data-i18n="properties.categoryMixedUse"
+            ></option>
+          </select>
+          <span
+            class="filter-count"
+            id="propCount"
+            style="white-space: nowrap"
+          ></span>
+        </div>
+
+        <div class="prop-status-pills" id="statusFilters">
+          <button
+            class="prop-filter-btn active"
+            data-status="all"
+            data-i18n="properties.filterAll"
+          ></button>
+          <button
+            class="prop-filter-btn"
+            data-status="available"
+            data-i18n="properties.statusAvailable"
+          ></button>
+          <button
+            class="prop-filter-btn"
+            data-status="under-development"
+            data-i18n="properties.statusUnderDevelopment"
+          ></button>
+          <button
+            class="prop-filter-btn"
+            data-status="reserved"
+            data-i18n="properties.statusReserved"
+          ></button>
+          <button
+            class="prop-filter-btn"
+            data-status="sold"
+            data-i18n="properties.statusSold"
+          ></button>
+        </div>
+      </div>
+
+      <!-- ── Grid ── -->
+      <div id="propGrid" class="prop-grid">
+        <div class="loading-state" style="grid-column: 1/-1">
+          <span class="spinner"></span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Delete modal -->
+    <div id="deleteModal" class="modal-backdrop hidden">
+      <div class="modal">
+        <button class="modal-close" id="modalCloseBtn" aria-label="Close">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+        <h3 data-i18n="dashboard.deleteConfirm"></h3>
+        <p
+          id="deleteName"
+          style="font-size: 0.875rem; color: var(--ink-700); margin-top: 0.5rem"
+        ></p>
+        <div class="modal-actions">
+          <button
+            class="btn btn-ghost"
+            id="cancelDelete"
+            data-i18n="dashboard.cancel"
+          ></button>
+          <button
+            class="btn btn-danger"
+            id="confirmDelete"
+            data-i18n="dashboard.delete"
+          ></button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import {
+        initI18n,
+        applyTranslations,
+        onLangChange,
+        t,
+      } from "./assets/js/i18n.js";
+      import {setupDashboard} from "./assets/js/dashboard-ui.js";
+      import {
+        listProperties,
+        deleteProperty,
+        logActivity,
+      } from "./assets/js/firestore.js";
+      import {
+        priceHtml,
+        statusLabel,
+        typeLabel,
+        escapeHtml,
+        localize,
+        searchHaystack,
+      } from "./assets/js/ui.js?v=2";
+
+      initI18n();
+
+      let all = [];
+      let pendingDelete = null;
+      let currentRole = "viewer";
+      let currentUserId = null;
+
+      const filters = {search: "", status: "all", type: "all", category: "all"};
+
+      function applyFilters() {
+        return all.filter((p) => {
+          if (filters.search) {
+            const hay = [
+              searchHaystack(p.title),
+              searchHaystack(p.location),
+              p.type,
+              p.category,
+            ]
+              .join(" ")
+              .toLowerCase();
+            if (!hay.includes(filters.search)) return false;
+          }
+          if (filters.status !== "all" && p.status !== filters.status)
+            return false;
+          if (filters.type !== "all" && p.type !== filters.type) return false;
+          if (filters.category !== "all" && p.category !== filters.category)
+            return false;
+          return true;
+        });
+      }
+
+      function cardHtml(p) {
+        const img = p.images?.[0];
+        const title = escapeHtml(localize(p.title) || "—");
+        const location = localize(p.location);
+        const area = p.areaSize
+          ? `${Number(p.areaSize).toLocaleString()} ${p.unit || "m²"}`
+          : "";
+        const viewUrl = `dashboard-property-view.html?id=${encodeURIComponent(p.id)}`;
+        return `
+          <div class="prop-card" data-view-href="${viewUrl}" style="cursor:pointer;">
+            <div class="prop-card-img">
+              ${
+                img
+                  ? `<img src="${escapeHtml(img)}" alt="" loading="lazy">`
+                  : `<div class="prop-card-img-placeholder">
+                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                       <rect x="3" y="3" width="18" height="18" rx="2"/>
+                       <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                     </svg>
+                   </div>`
+              }
+              <span class="badge badge-${p.status}">${escapeHtml(statusLabel(p.status))}</span>
+              <div class="prop-card-actions-overlay">
+                <a class="icon-btn" href="dashboard-property-edit.html?id=${encodeURIComponent(p.id)}" data-role-require="properties.edit" aria-label="Edit" title="${t("dashboard.editPropertyTitle")}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </a>
+                <button class="icon-btn danger" data-id="${escapeHtml(p.id)}" data-title="${title}" data-role-require="properties.delete" aria-label="Delete">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="prop-card-body">
+              <div class="prop-card-meta">
+                <span class="badge badge-muted" style="font-size:0.65rem;">${escapeHtml(typeLabel(p.type) || "—")}</span>
+                ${area ? `<span>${escapeHtml(area)}</span>` : ""}
+              </div>
+              <h3 class="prop-card-name">${title}</h3>
+              ${
+                location
+                  ? `<p class="prop-card-location">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${escapeHtml(location)}
+              </p>`
+                  : ""
+              }
+              <div class="prop-card-footer">${priceHtml(p.price)}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      function render() {
+        const filtered = applyFilters();
+        const grid = document.getElementById("propGrid");
+        const countEl = document.getElementById("propCount");
+
+        const countNum = filtered.length;
+        countEl.textContent = countNum
+          ? `${countNum} ${t("dashboard.propertiesCount")}`
+          : "";
+
+        if (filtered.length === 0) {
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+            <strong>${all.length === 0 ? t("dashboard.noProperties") : t("properties.noMatches")}</strong>
+            ${
+              all.length === 0
+                ? `<a href="dashboard-property-edit.html" style="display:block;margin-top:.5rem;text-decoration:underline;text-underline-offset:4px;color:var(--ink-900);">${t("dashboard.addFirst")}</a>`
+                : `<p style="margin-top:.375rem;font-size:.8125rem;color:var(--ink-500);">${t("properties.noMatchesHint")}</p>`
+            }
+          </div>`;
+          return;
+        }
+
+        grid.innerHTML = filtered.map(cardHtml).join("");
+
+        grid.querySelectorAll(".prop-card[data-view-href]").forEach((card) => {
+          card.addEventListener("click", (e) => {
+            if (e.target.closest(".prop-card-actions-overlay")) return;
+            location.href = card.dataset.viewHref;
+          });
+        });
+
+        grid.querySelectorAll(".icon-btn.danger[data-id]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            pendingDelete = {id: btn.dataset.id, title: btn.dataset.title};
+            document.getElementById("deleteName").textContent =
+              pendingDelete.title;
+            document.getElementById("deleteModal").classList.remove("hidden");
+          });
+        });
+
+        import("./assets/js/roles.js").then((m) =>
+          m.applyRoleGuards(grid, currentRole),
+        );
+      }
+
+      // Filter wiring
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        filters.search = e.target.value.trim().toLowerCase();
+        render();
+      });
+      document.getElementById("typeFilter").addEventListener("change", (e) => {
+        filters.type = e.target.value;
+        render();
+      });
+      document
+        .getElementById("categoryFilter")
+        .addEventListener("change", (e) => {
+          filters.category = e.target.value;
+          render();
+        });
+      document
+        .getElementById("statusFilters")
+        .addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-status]");
+          if (!btn) return;
+          document
+            .querySelectorAll("#statusFilters [data-status]")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          filters.status = btn.dataset.status;
+          render();
+        });
+
+      async function load() {
+        try {
+          all = await Promise.race([
+            listProperties(),
+            new Promise((_, rej) =>
+              setTimeout(() => rej(new Error("load_timeout")), 10_000),
+            ),
+          ]);
+        } catch (e) {
+          all = [];
+          document.getElementById("propGrid").innerHTML =
+            `<p class="empty-state" style="grid-column:1/-1;color:#dc2626;">فشل تحميل العقارات · ${e.message}</p>`;
+          return;
+        }
+        render();
+      }
+
+      // Delete modal
+      const deleteModal = document.getElementById("deleteModal");
+      const closeDeleteModal = () => {
+        deleteModal.classList.add("hidden");
+        pendingDelete = null;
+      };
+      document
+        .getElementById("cancelDelete")
+        .addEventListener("click", closeDeleteModal);
+      document
+        .getElementById("modalCloseBtn")
+        .addEventListener("click", closeDeleteModal);
+      deleteModal.addEventListener("click", (e) => {
+        if (e.target === deleteModal) closeDeleteModal();
+      });
+
+      document
+        .getElementById("confirmDelete")
+        .addEventListener("click", async (e) => {
+          if (!pendingDelete) return;
+          const btn = e.currentTarget;
+          btn.setAttribute("disabled", "");
+          btn.textContent = t("dashboard.deleting");
+          try {
+            await deleteProperty(pendingDelete.id);
+            await logActivity({
+              action: "deleted",
+              targetType: "property",
+              targetId: pendingDelete.id,
+              userId: currentUserId,
+              meta: {title: pendingDelete.title},
+            });
+            all = all.filter((x) => x.id !== pendingDelete.id);
+            closeDeleteModal();
+            render();
+          } catch (err) {
+            alert(err.message);
+          } finally {
+            btn.removeAttribute("disabled");
+            btn.textContent = t("dashboard.delete");
+          }
+        });
+
+      onLangChange(() => {
+        applyTranslations();
+        render();
+      });
+
+      (async () => {
+        const ctx = await setupDashboard("dashboard-properties.html");
+        currentRole = ctx.role;
+        currentUserId = ctx.user.uid;
+        applyTranslations();
+        load();
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script src="assets/js/animations.js"></script>
+  </body>
+</html>

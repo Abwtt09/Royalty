@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.cloudinary.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js" />
+    <link rel="modulepreload" href="assets/js/firebase-config.js" />
+    <link rel="modulepreload" href="assets/js/auth.js" />
+    <link rel="modulepreload" href="assets/js/firestore.js" />
+    <link rel="modulepreload" href="assets/js/i18n.js" />
+    <link rel="modulepreload" href="assets/js/ui.js?v=2" />
+    <title>Royalty Real Estate · الملكية للإستثمار — لوحة الإدارة</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" href="assets/img/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/dashboard.css" />
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <p class="eyebrow" data-i18n="dashboard.welcome"></p>
+        <h1 id="welcomeName">…</h1>
+        <p data-i18n="dashboard.recentListings"></p>
+      </header>
+
+      <section class="stat-grid">
+        <div class="stat-card"><p class="label" data-i18n="dashboard.statsProperties"></p><p class="value num" id="statTotal"><span class="skeleton-block" style="width:5rem;"></span></p></div>
+        <div class="stat-card"><p class="label" data-i18n="dashboard.statsAvailable"></p><p class="value num" id="statAvailable"><span class="skeleton-block" style="width:5rem;"></span></p></div>
+        <div class="stat-card"><p class="label" data-i18n="dashboard.statsSold"></p><p class="value num" id="statSold"><span class="skeleton-block" style="width:5rem;"></span></p></div>
+        <div class="stat-card"><p class="label" data-i18n="dashboard.statsAUM"></p><p class="value num" id="statAUM"><span class="skeleton-block" style="width:7rem;"></span></p></div>
+      </section>
+
+      <section class="dashboard-grid">
+        <div class="surface-pad surface">
+          <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:1rem;">
+            <div>
+              <p class="eyebrow" data-i18n="dashboard.recentListings"></p>
+              <h2 style="font-size:1.5rem;" data-i18n="dashboard.latestProperties"></h2>
+            </div>
+            <a href="dashboard-properties.html" class="btn btn-ghost btn-sm" data-i18n="dashboard.properties"></a>
+          </div>
+          <div id="latestList" class="mt-6">
+            <div class="loading-state"><span class="spinner"></span></div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1.5rem;">
+          <div class="surface-pad surface">
+            <p class="eyebrow" data-i18n="dashboard.inbox"></p>
+            <h2 style="font-size:1.5rem;" data-i18n="dashboard.messages"></h2>
+            <p class="value num" id="statUnread" style="font-family:var(--font-display);font-size:2.25rem;letter-spacing:-0.04em;margin-top:1rem;">—</p>
+            <p style="font-size:0.75rem;color:var(--ink-500);" data-i18n="dashboard.unreadInquiries"></p>
+            <a href="dashboard-messages.html" class="btn btn-ghost btn-sm mt-4" data-i18n="dashboard.messages"></a>
+          </div>
+          <div class="surface-pad surface">
+            <p class="eyebrow" data-i18n="dashboard.attachmentsEyebrow"></p>
+            <h2 style="font-size:1.5rem;" data-i18n="dashboard.attachments"></h2>
+            <p class="value num" id="statAttachments" style="font-family:var(--font-display);font-size:2.25rem;letter-spacing:-0.04em;margin-top:1rem;">—</p>
+            <p style="font-size:0.75rem;color:var(--ink-500);" data-i18n="dashboard.attachmentsCount"></p>
+            <a href="dashboard-attachments.html" class="btn btn-ghost btn-sm mt-4" data-i18n="dashboard.attachments"></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface-pad surface mt-10">
+        <p class="eyebrow" data-i18n="dashboard.activityLog"></p>
+        <h2 style="font-size:1.5rem;" data-i18n="dashboard.activityLog"></h2>
+        <div id="activityList" class="mt-6">
+          <div class="loading-state"><span class="spinner"></span></div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initI18n, applyTranslations } from './assets/js/i18n.js';
+      import { setupDashboard } from './assets/js/dashboard-ui.js';
+      import {
+        watchProperties, watchAttachments, watchLogs, watchMessagesForUser,
+      } from './assets/js/firestore.js';
+      import { priceHtml, formatDate, escapeHtml, localize } from './assets/js/ui.js?v=2';
+
+      initI18n();
+
+      (async () => {
+        console.log('[STARTUP STEP 1] Firebase SDK loaded — beginning startup sequence');
+        // ── Startup timeout: if the app doesn't boot within 10 s, surface an error ──
+        let _startupDone = false;
+        const _startupTimer = setTimeout(() => {
+          if (_startupDone) return;
+          console.error('[STARTUP] 10 s global timeout reached — startup did not complete. Check STEP logs above to identify the stuck operation.');
+          _showStartupError('فشل التحميل · Load timeout');
+        }, 10_000);
+
+        function _showStartupError(msg) {
+          const retry = `<button onclick="location.reload()" style="cursor:pointer;text-decoration:underline;background:0;border:0;color:inherit;font-size:inherit;padding:0;">↺ إعادة المحاولة · Retry</button>`;
+          ['latestList', 'activityList'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<p class="empty-state" style="color:#dc2626;">${msg} ${retry}</p>`;
+          });
+          ['statTotal', 'statAvailable', 'statSold', 'statAUM'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '—';
+          });
+        }
+
+        // Steps 1–5 are logged inside setupDashboard (dashboard-ui.js)
+        let ctx;
+        try {
+          ctx = await setupDashboard('index.html');
+        } catch (err) {
+          _startupDone = true;
+          clearTimeout(_startupTimer);
+          const silent = ['not signed in', 'no access', 'permission denied'];
+          if (!silent.includes(err.message)) {
+            console.error('[STARTUP] setupDashboard rejected:', err.message);
+            _showStartupError(`خطأ في التحميل · ${err.message}`);
+          }
+          return;
+        }
+        _startupDone = true;
+        clearTimeout(_startupTimer);
+
+        const { user, profile } = ctx;
+        document.getElementById('welcomeName').textContent =
+          profile?.name?.split(' ')[0] || profile?.username || '—';
+
+        const els = {
+          total: document.getElementById('statTotal'),
+          available: document.getElementById('statAvailable'),
+          sold: document.getElementById('statSold'),
+          aum: document.getElementById('statAUM'),
+          unread: document.getElementById('statUnread'),
+          attachments: document.getElementById('statAttachments'),
+          list: document.getElementById('latestList'),
+          logs: document.getElementById('activityList'),
+        };
+
+        // ── [4] Properties Loaded — Live feed ──
+        watchProperties(
+          (properties) => {
+            els.total.textContent = properties.length;
+            els.available.textContent = properties.filter((p) => p.status === 'available').length;
+            els.sold.textContent = properties.filter((p) => p.status === 'sold').length;
+            const aum = properties.reduce((s, p) => (p.status !== 'sold' ? s + (p.price || 0) : s), 0);
+            els.aum.innerHTML = priceHtml(aum);
+
+            if (properties.length === 0) {
+              els.list.innerHTML = `<p class="empty-state" data-i18n="dashboard.noProperties"></p>`;
+            } else {
+              els.list.innerHTML = properties.slice(0, 5).map((p) => {
+                const cover = p.images && p.images[0];
+                return `
+                  <a class="overview-row" href="dashboard-property-edit.html?id=${encodeURIComponent(p.id)}">
+                    <div class="overview-thumb">
+                      ${cover ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy" />` : ''}
+                    </div>
+                    <div class="overview-meta">
+                      <p class="overview-title">${escapeHtml(localize(p.title))}</p>
+                      <p class="overview-location">${escapeHtml(localize(p.location))}</p>
+                    </div>
+                    <div class="overview-price">${priceHtml(p.price)}</div>
+                  </a>
+                `;
+              }).join('');
+            }
+            applyTranslations(els.list);
+          },
+          (err) => {
+            console.error('[watchProperties]', err);
+            els.list.innerHTML = `<p class="empty-state" style="color:#dc2626;">خطأ في تحميل العقارات · ${err.message}</p>`;
+            ['statTotal','statAvailable','statSold','statAUM'].forEach((id) => {
+              const el = document.getElementById(id);
+              if (el && el.querySelector('.skeleton-block')) el.textContent = '—';
+            });
+          },
+        );
+
+        // ── Live: messages (unread count) ──
+        watchMessagesForUser(
+          user.uid,
+          (messages) => {
+            els.unread.textContent = messages.filter((m) => !(m.readBy || {})[user.uid]).length;
+          },
+        );
+
+        // ── Live: attachments count ──
+        watchAttachments(
+          (attachments) => { els.attachments.textContent = attachments.length; },
+        );
+
+        // ── Live: activity log ──
+        watchLogs(
+          (logs) => {
+            if (logs.length === 0) {
+              els.logs.innerHTML = `<p class="empty-state" data-i18n="dashboard.noActivity"></p>`;
+            } else {
+              els.logs.innerHTML = logs.map((l) => `
+                <div class="list-row">
+                  <div class="meta">
+                    <p>${escapeHtml(l.action)} · ${escapeHtml(l.targetType || '')}</p>
+                    <p class="num">${escapeHtml(l.targetId || '')}</p>
+                  </div>
+                  <p style="font-size:0.75rem;color:var(--ink-500);white-space:nowrap;">${escapeHtml(formatDate(l.timestamp))}</p>
+                </div>
+              `).join('');
+            }
+            applyTranslations(els.logs);
+          },
+          8,
+          (err) => {
+            console.error('[watchLogs]', err);
+            els.logs.innerHTML = `<p class="empty-state" style="color:#dc2626;">خطأ في سجل النشاط · ${err.message}</p>`;
+          },
+        );
+
+        console.log('[STARTUP STEP 6] UI Ready — all Firestore watchers registered, dashboard fully loaded');
+        applyTranslations();
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script src="assets/js/animations.js"></script>
+  </body>
+</html>

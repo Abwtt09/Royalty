@@ -1,0 +1,1724 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://firestore.googleapis.com"
+      crossorigin
+    />
+    <link rel="dns-prefetch" href="https://api.cloudinary.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"
+    />
+    <link rel="modulepreload" href="assets/js/firebase-config.js" />
+    <link rel="modulepreload" href="assets/js/auth.js" />
+    <link rel="modulepreload" href="assets/js/firestore.js" />
+    <link rel="modulepreload" href="assets/js/i18n.js" />
+    <link rel="modulepreload" href="assets/js/ui.js?v=2" />
+    <title>عقار · Royalty Real Estate</title>
+    <link rel="icon" href="assets/img/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/dashboard.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+      crossorigin=""
+    />
+    <style>
+      /* Boundary section */
+      .boundary-extracted-note {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        padding: 0.625rem 0.875rem;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 0.625rem;
+        color: #15803d;
+        font-size: 0.8125rem;
+        margin-bottom: 0.875rem;
+      }
+      .boundary-status-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .boundary-status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.8125rem;
+        color: var(--ink-400);
+      }
+      .boundary-status-indicator.has-boundary {
+        color: #15803d;
+      }
+      .boundary-status-indicator.has-boundary svg {
+        stroke: #15803d;
+      }
+      .boundary-status-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.75rem;
+        color: var(--ink-500);
+      }
+      .boundary-area-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.625rem;
+        background: #eff6ff;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        color: #1d4ed8;
+        font-weight: 500;
+      }
+      /* Leaflet in form context */
+      #boundaryMapCanvas .leaflet-pane {
+        z-index: 200;
+      }
+      #boundaryMapCanvas .leaflet-top,
+      #boundaryMapCanvas .leaflet-bottom {
+        z-index: 300;
+      }
+      .boundary-draw-active #boundaryMapCanvas {
+        cursor: crosshair !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <a href="dashboard-properties.html" class="detail-back">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="rtl-flip"
+          >
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+          <span data-i18n="dashboard.backToProperties"></span>
+        </a>
+        <h1 id="pageTitle"></h1>
+        <p id="pageHint"></p>
+      </header>
+
+      <form id="propertyForm" style="display: grid; gap: 2.5rem">
+        <section class="form-section">
+          <h3 data-i18n="dashboard.sectionOverview"></h3>
+          <p class="field-hint" data-i18n="dashboard.bilingualHint"></p>
+
+          <div class="form-grid form-grid-2">
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.titleFieldAr"
+              ></label>
+              <input
+                class="field-input"
+                name="title_ar"
+                type="text"
+                dir="rtl"
+                required
+                placeholder="ميرا هايتس — فيلا على المنحدر"
+              />
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.titleFieldEn"
+              ></label>
+              <input
+                class="field-input"
+                name="title_en"
+                type="text"
+                dir="ltr"
+                required
+                placeholder="Mira Heights — Hillside Villa"
+              />
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-2">
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.descriptionFieldAr"
+              ></label>
+              <textarea
+                class="field-textarea"
+                name="description_ar"
+                dir="rtl"
+                rows="6"
+                required
+              ></textarea>
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.descriptionFieldEn"
+              ></label>
+              <textarea
+                class="field-textarea"
+                name="description_en"
+                dir="ltr"
+                rows="6"
+                required
+              ></textarea>
+            </div>
+          </div>
+          <div class="form-grid form-grid-3">
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.typeField"
+              ></label>
+              <select class="field-select" name="type">
+                <option value="land">Land / أرض</option>
+                <option value="villa">Villa / فيلا</option>
+                <option value="building">Building / مبنى</option>
+                <option value="commercial">Commercial / تجاري</option>
+                <option value="apartment">Apartment / شقة</option>
+                <option value="mixed-use">Mixed-use / متعدد الاستخدامات</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.categoryField"
+              ></label>
+              <select class="field-select" name="category">
+                <option value="residential">Residential / سكني</option>
+                <option value="commercial">Commercial / تجاري</option>
+                <option value="land">Land / أراضي</option>
+                <option value="mixed-use">Mixed-use / متعدد</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.statusField"
+              ></label>
+              <select class="field-select" name="status">
+                <option value="available">Available / متاح</option>
+                <option value="reserved">Reserved / محجوز</option>
+                <option value="under-development">
+                  Under development / قيد التطوير
+                </option>
+                <option value="sold">Sold / مُباع</option>
+              </select>
+            </div>
+          </div>
+          <label class="checkbox-row">
+            <input type="checkbox" name="featured" />
+            <span data-i18n="dashboard.featureOnHome"></span>
+          </label>
+        </section>
+
+        <section class="form-section">
+          <h3 data-i18n="dashboard.sectionCommercial"></h3>
+          <div class="field-group">
+            <label class="field-label" data-i18n="dashboard.priceField"></label>
+            <div class="price-input-wrap">
+              <span
+                class="price-input-symbol"
+                id="priceSymbolSlot"
+                aria-hidden="true"
+              ></span>
+              <input
+                class="field-input num price-input-field"
+                name="price"
+                type="number"
+                min="0"
+                step="any"
+                required
+              />
+              <span class="price-input-suffix">OMR</span>
+            </div>
+            <span
+              class="field-hint"
+              data-i18n="dashboard.priceLockedToOmr"
+            ></span>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h3 data-i18n="dashboard.sectionLocation"></h3>
+
+          <div class="form-grid form-grid-2">
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.locationFieldAr"
+              ></label>
+              <input
+                class="field-input"
+                name="location_ar"
+                type="text"
+                dir="rtl"
+                required
+                placeholder="الرياض، السعودية"
+              />
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.locationFieldEn"
+              ></label>
+              <input
+                class="field-input"
+                name="location_en"
+                type="text"
+                dir="ltr"
+                required
+                placeholder="Riyadh, Saudi Arabia"
+              />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label
+              class="field-label"
+              data-i18n="dashboard.mapUrlField"
+            ></label>
+            <input
+              class="field-input num"
+              name="mapUrl"
+              type="url"
+              dir="ltr"
+              data-i18n-placeholder="dashboard.mapUrlPlaceholder"
+            />
+            <span class="field-hint" data-i18n="dashboard.mapUrlHint"></span>
+          </div>
+
+          <div id="mapPreviewWrap" class="hidden">
+            <p class="field-label mb-4" data-i18n="dashboard.mapPreview"></p>
+            <div class="map-iframe">
+              <iframe
+                id="mapPreviewFrame"
+                loading="lazy"
+                allowfullscreen
+                referrerpolicy="no-referrer-when-downgrade"
+              ></iframe>
+            </div>
+          </div>
+
+          <div class="form-grid form-grid-2">
+            <div class="field-group">
+              <label class="field-label" data-i18n="dashboard.latitude"></label>
+              <input
+                class="field-input num"
+                name="lat"
+                type="number"
+                step="any"
+                dir="ltr"
+              />
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.longitude"
+              ></label>
+              <input
+                class="field-input num"
+                name="lng"
+                type="number"
+                step="any"
+                dir="ltr"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h3 data-i18n="dashboard.sectionSpecs"></h3>
+          <div class="form-grid form-grid-4">
+            <div class="field-group">
+              <label class="field-label" data-i18n="dashboard.areaSize"></label>
+              <input
+                class="field-input num"
+                name="areaSize"
+                type="number"
+                min="0"
+                required
+              />
+            </div>
+            <div class="field-group">
+              <label class="field-label" data-i18n="dashboard.unit"></label>
+              <select class="field-select" name="areaUnit">
+                <option value="m2">m²</option>
+                <option value="ft2">ft²</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.bedroomsField"
+              ></label>
+              <input
+                class="field-input num"
+                name="bedrooms"
+                type="number"
+                min="0"
+              />
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.bathroomsField"
+              ></label>
+              <input
+                class="field-input num"
+                name="bathrooms"
+                type="number"
+                min="0"
+              />
+            </div>
+          </div>
+          <div class="form-grid form-grid-2">
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.tagsFieldAr"
+              ></label>
+              <input
+                class="field-input"
+                name="tags_ar"
+                type="text"
+                dir="rtl"
+                placeholder="إطلالة بحرية، تصميم معماري، منزل ذكي"
+              />
+              <span class="field-hint" data-i18n="dashboard.tagsHint"></span>
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.tagsFieldEn"
+              ></label>
+              <input
+                class="field-input"
+                name="tags_en"
+                type="text"
+                dir="ltr"
+                placeholder="Sea view, Architect-designed, Smart home"
+              />
+              <span class="field-hint" data-i18n="dashboard.tagsHint"></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h3 data-i18n="dashboard.sectionMedia"></h3>
+          <div id="mediaUploader"></div>
+        </section>
+
+        <!-- ─── Deed & Documents Section ─── -->
+        <section class="form-section" id="deedSection">
+          <h3 data-i18n="deed.sectionTitle"></h3>
+          <p class="field-hint" data-i18n="deed.uploadHint"></p>
+
+          <div class="deed-section">
+            <!-- Drop zone -->
+            <div
+              class="deed-drop-zone"
+              id="deedDropZone"
+              role="button"
+              tabindex="0"
+              aria-label="Upload documents"
+            >
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                style="color: var(--ink-400)"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              <p data-i18n="deed.uploadTitle"></p>
+              <p class="deed-accept" data-i18n="deed.accept"></p>
+            </div>
+            <input
+              type="file"
+              id="deedFileInput"
+              accept=".pdf,image/*"
+              multiple
+              style="display: none"
+            />
+
+            <!-- Extraction progress -->
+            <div class="deed-extracting-bar hidden" id="deedExtracting">
+              <span
+                class="spinner"
+                style="
+                  width: 1rem;
+                  height: 1rem;
+                  border-width: 2px;
+                  flex-shrink: 0;
+                "
+              ></span>
+              <span data-i18n="deed.extracting"></span>
+            </div>
+
+            <!-- Extraction result panel -->
+            <div class="deed-result hidden" id="deedResult">
+              <h4 data-i18n="deed.reviewTitle"></h4>
+              <p class="deed-result-sub" data-i18n="deed.reviewSubtitle"></p>
+              <div class="deed-fields-grid" id="deedFieldsGrid"></div>
+              <div style="margin-top: 1rem">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  id="deedApplyAllBtn"
+                  data-i18n="deed.applyAll"
+                ></button>
+              </div>
+            </div>
+
+            <!-- Image-only warning -->
+            <div class="deed-image-note hidden" id="deedImageNote">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="flex-shrink: 0; margin-top: 2px"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span data-i18n="deed.imageNote"></span>
+            </div>
+
+            <!-- Extraction error -->
+            <div
+              class="deed-image-note hidden"
+              id="deedExtractError"
+              style="background: #fef2f2; border-color: #fecaca; color: #dc2626"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                style="flex-shrink: 0; margin-top: 2px"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+              <span id="deedExtractErrorMsg"></span>
+            </div>
+
+            <!-- Uploaded docs list -->
+            <div id="deedDocsList"></div>
+          </div>
+        </section>
+
+        <!-- ─── Land Boundary Section ─── -->
+        <section class="form-section" id="boundarySection">
+          <h3 data-i18n="boundary.sectionTitle"></h3>
+          <p class="field-hint" data-i18n="boundary.sectionHint"></p>
+
+          <!-- Auto-extracted boundary alert -->
+          <div class="boundary-extracted-note hidden" id="boundaryAutoNote">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="flex-shrink: 0"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span id="boundaryAutoMsg"></span>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              id="boundaryApplyExtracted"
+              data-i18n="boundary.applyBoundary"
+            ></button>
+          </div>
+
+          <!-- Status row -->
+          <div class="boundary-status-row" id="boundaryStatusRow">
+            <div class="boundary-status-indicator" id="boundaryStatusIndicator">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span data-i18n="boundary.noBoundary"></span>
+            </div>
+            <div
+              class="boundary-status-meta hidden"
+              id="boundaryStatusMeta"
+            ></div>
+          </div>
+
+          <!-- Mini satellite map for boundary drawing -->
+          <div id="boundaryMapWrap" style="margin-top: 1rem">
+            <div
+              id="boundaryMapCanvas"
+              style="
+                height: 380px;
+                border-radius: 0.875rem;
+                overflow: hidden;
+                border: 1.5px solid var(--ink-200);
+              "
+            ></div>
+          </div>
+
+          <!-- Boundary actions -->
+          <div
+            class="boundary-actions"
+            style="
+              margin-top: 0.75rem;
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: wrap;
+              align-items: center;
+            "
+          >
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              id="boundaryDrawBtn"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polygon points="3 11 22 2 13 21 11 13 3 11" />
+              </svg>
+              <span data-i18n="boundary.drawBoundary"></span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger btn-sm hidden"
+              id="boundaryClearBtn"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
+              </svg>
+              <span data-i18n="boundary.clearBoundary"></span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm hidden"
+              id="boundaryKmlBtn"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span data-i18n="boundary.exportKml"></span>
+            </button>
+            <span
+              class="boundary-area-badge hidden"
+              id="boundaryAreaBadge"
+            ></span>
+          </div>
+
+          <p
+            class="field-hint"
+            id="boundaryDrawHint"
+            style="display: none"
+            data-i18n="boundary.drawInstructions"
+          ></p>
+
+          <!-- Oman bounds warning -->
+          <div
+            class="deed-image-note hidden"
+            id="boundaryOmanWarning"
+            style="background: #fffbeb; border-color: #fde68a; color: #92400e"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              style="flex-shrink: 0; margin-top: 2px"
+            >
+              <path
+                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span data-i18n="boundary.omanWarning"></span>
+          </div>
+        </section>
+
+        <p class="field-error hidden" id="formError"></p>
+
+        <div class="form-actions">
+          <a
+            href="dashboard-properties.html"
+            class="btn btn-ghost"
+            data-i18n="dashboard.cancel"
+          ></a>
+          <button type="submit" class="btn btn-primary" id="saveBtn">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            <span id="saveLabel" data-i18n="dashboard.save"></span>
+          </button>
+        </div>
+      </form>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      crossorigin=""
+    ></script>
+    <script
+      src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"
+      crossorigin=""
+    ></script>
+    <script type="module">
+      import {initI18n, applyTranslations, t} from "./assets/js/i18n.js";
+      import {setupDashboard, toast} from "./assets/js/dashboard-ui.js";
+      import {
+        getProperty,
+        createProperty,
+        updateProperty,
+        updatePropertyBoundary,
+        logActivity,
+        listPropertyDocs,
+        createPropertyDoc,
+        deletePropertyDoc,
+      } from "./assets/js/firestore.js";
+      import {
+        uploadToCloudinary,
+        isCloudinaryConfigured,
+      } from "./assets/js/cloudinary.js";
+      import {
+        escapeHtml,
+        googleMapsEmbedUrl,
+        OMR_SYMBOL_SVG,
+      } from "./assets/js/ui.js?v=2";
+      import {extractPropertyData} from "./assets/js/property-extractor.js";
+      import {
+        buildGeoJSON,
+        validatePolygon,
+        polygonAreaM2,
+        formatArea,
+        geoJSONToKML,
+        geoJSONToPoints,
+        isWithinOman,
+      } from "./assets/js/boundary-utils.js";
+
+      initI18n();
+
+      // Drop the OMR symbol into the price field once the DOM is parsed.
+      const symbolSlot = document.getElementById("priceSymbolSlot");
+      if (symbolSlot) symbolSlot.innerHTML = OMR_SYMBOL_SVG;
+
+      const id = new URLSearchParams(location.search).get("id");
+      const mode = id ? "edit" : "create";
+      let currentUserId = null;
+      const form = document.getElementById("propertyForm");
+      const errorEl = document.getElementById("formError");
+      const saveBtn = document.getElementById("saveBtn");
+      const saveLabel = document.getElementById("saveLabel");
+
+      document.getElementById("pageTitle").textContent =
+        mode === "create"
+          ? t("dashboard.addPropertyTitle")
+          : t("dashboard.editPropertyTitle");
+      document.getElementById("pageHint").textContent =
+        mode === "create" ? t("dashboard.addPropertyHint") : "";
+
+      /* ---------- Cloudinary media uploader ---------- */
+      let images = [];
+      const uploaderRoot = document.getElementById("mediaUploader");
+      const inputEl = document.createElement("input");
+      inputEl.type = "file";
+      inputEl.accept = "image/*";
+      inputEl.multiple = true;
+      inputEl.style.display = "none";
+      uploaderRoot.appendChild(inputEl);
+
+      function renderUploader(busy = false, progress = 0) {
+        const grid = document.createElement("div");
+        grid.className = "uploader-grid";
+        grid.innerHTML = `
+          ${images
+            .map(
+              (url) => `
+            <div class="uploader-tile">
+              <img src="${escapeHtml(url)}" alt="" />
+              <button type="button" class="remove" data-url="${escapeHtml(url)}" aria-label="Remove">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+              </button>
+            </div>
+          `,
+            )
+            .join("")}
+          ${
+            images.length < 12
+              ? `
+            <button type="button" class="uploader-add" id="uploadAddBtn" ${busy ? "disabled" : ""}>
+              ${
+                busy
+                  ? `<span class="spinner"></span><span class="uploader-progress num">${progress}%</span>`
+                  : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                   <span data-i18n="dashboard.addImages"></span>`
+              }
+            </button>
+          `
+              : ""
+          }
+        `;
+        const wrap = document.createElement("div");
+        wrap.style.display = "flex";
+        wrap.style.flexDirection = "column";
+        wrap.style.gap = "1rem";
+        wrap.appendChild(grid);
+        const hint = document.createElement("p");
+        hint.className = "uploader-hint";
+        hint.innerHTML = `<span class="num">${images.length}/12</span> · <span data-i18n="dashboard.imagesStored"></span>`;
+        wrap.appendChild(hint);
+
+        // clear and re-mount
+        Array.from(uploaderRoot.children).forEach((c) => {
+          if (c !== inputEl) c.remove();
+        });
+        uploaderRoot.appendChild(wrap);
+
+        grid.querySelectorAll(".remove").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const url = btn.getAttribute("data-url");
+            images = images.filter((x) => x !== url);
+            renderUploader();
+          });
+        });
+        const addBtn = grid.querySelector("#uploadAddBtn");
+        if (addBtn) addBtn.addEventListener("click", () => inputEl.click());
+        applyTranslations(uploaderRoot);
+      }
+
+      inputEl.addEventListener("change", async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        if (!isCloudinaryConfigured()) {
+          errorEl.textContent = "Upload service unavailable.";
+          errorEl.classList.remove("hidden");
+          return;
+        }
+        errorEl.classList.add("hidden");
+        for (let i = 0; i < files.length && images.length < 12; i++) {
+          try {
+            renderUploader(true, 0);
+            const url = await uploadToCloudinary(files[i], {
+              folder: "virea/properties",
+              onProgress: (pct) => renderUploader(true, Math.round(pct)),
+            });
+            images.push(url);
+            renderUploader();
+          } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.classList.remove("hidden");
+            break;
+          }
+        }
+        inputEl.value = "";
+        renderUploader();
+      });
+
+      renderUploader();
+
+      /* ---------- bilingual + map helpers ---------- */
+      // accepts a value that's either a plain legacy string OR a {ar,en} object
+      const langValue = (v, lang) => {
+        if (v == null) return "";
+        if (typeof v === "string") return lang === "ar" ? v : v; // mirror legacy to both
+        return v[lang] || "";
+      };
+      const langTags = (tags, lang) => {
+        if (!tags) return "";
+        if (Array.isArray(tags)) return tags.join(", ");
+        return (tags[lang] || []).join(", ");
+      };
+
+      function refreshMapPreview() {
+        const url = form.elements.mapUrl.value;
+        const lat = form.elements.lat.value,
+          lng = form.elements.lng.value;
+        const coords =
+          lat !== "" && lng !== ""
+            ? {lat: Number(lat), lng: Number(lng)}
+            : undefined;
+        const embed = googleMapsEmbedUrl(url, coords);
+        const wrap = document.getElementById("mapPreviewWrap");
+        const frame = document.getElementById("mapPreviewFrame");
+        if (embed) {
+          frame.src = embed;
+          wrap.classList.remove("hidden");
+        } else {
+          frame.removeAttribute("src");
+          wrap.classList.add("hidden");
+        }
+      }
+      ["mapUrl", "lat", "lng"].forEach((n) =>
+        form.elements[n].addEventListener("input", refreshMapPreview),
+      );
+
+      /* ---------- load existing property ---------- */
+      async function loadExisting() {
+        if (!id) return;
+        const p = await getProperty(id);
+        if (!p) return;
+        form.elements.title_ar.value = langValue(p.title, "ar");
+        form.elements.title_en.value = langValue(p.title, "en");
+        form.elements.description_ar.value = langValue(p.description, "ar");
+        form.elements.description_en.value = langValue(p.description, "en");
+        form.elements.location_ar.value = langValue(p.location, "ar");
+        form.elements.location_en.value = langValue(p.location, "en");
+        form.elements.tags_ar.value = langTags(p.tags, "ar");
+        form.elements.tags_en.value = langTags(p.tags, "en");
+        form.elements.type.value = p.type || "villa";
+        form.elements.category.value = p.category || "residential";
+        form.elements.status.value = p.status || "available";
+        form.elements.featured.checked = !!p.featured;
+        form.elements.price.value = p.price || 0;
+        // currency is locked to OMR — no field to populate
+        form.elements.mapUrl.value = p.mapUrl || "";
+        form.elements.lat.value = p.coordinates?.lat ?? "";
+        form.elements.lng.value = p.coordinates?.lng ?? "";
+        form.elements.areaSize.value = p.areaSize || 0;
+        form.elements.areaUnit.value = p.areaUnit || "m2";
+        form.elements.bedrooms.value = p.bedrooms ?? "";
+        form.elements.bathrooms.value = p.bathrooms ?? "";
+        images = (p.images || []).slice();
+        renderUploader();
+        refreshMapPreview();
+        if (p.boundary) {
+          boundary = p.boundary;
+          boundarySource = p.boundarySource || "manual";
+        }
+      }
+
+      /* ---------- submit ---------- */
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorEl.classList.add("hidden");
+        saveBtn.setAttribute("disabled", "");
+        saveLabel.textContent = t("dashboard.saving");
+        try {
+          const lat = form.elements.lat.value,
+            lng = form.elements.lng.value;
+          const bedrooms = form.elements.bedrooms.value,
+            bathrooms = form.elements.bathrooms.value;
+          const splitTags = (s) =>
+            s
+              .split(/[,،]/)
+              .map((t) => t.trim())
+              .filter(Boolean);
+          const payload = {
+            title: {
+              ar: form.elements.title_ar.value.trim(),
+              en: form.elements.title_en.value.trim(),
+            },
+            description: {
+              ar: form.elements.description_ar.value.trim(),
+              en: form.elements.description_en.value.trim(),
+            },
+            location: {
+              ar: form.elements.location_ar.value.trim(),
+              en: form.elements.location_en.value.trim(),
+            },
+            tags: {
+              ar: splitTags(form.elements.tags_ar.value),
+              en: splitTags(form.elements.tags_en.value),
+            },
+            type: form.elements.type.value,
+            category: form.elements.category.value,
+            status: form.elements.status.value,
+            featured: form.elements.featured.checked,
+            price: Number(form.elements.price.value) || 0,
+            currency: "OMR",
+            mapUrl: form.elements.mapUrl.value.trim() || undefined,
+            coordinates:
+              lat !== "" && lng !== ""
+                ? {lat: Number(lat), lng: Number(lng)}
+                : undefined,
+            areaSize: Number(form.elements.areaSize.value) || 0,
+            areaUnit: form.elements.areaUnit.value,
+            bedrooms: bedrooms !== "" ? Number(bedrooms) : undefined,
+            bathrooms: bathrooms !== "" ? Number(bathrooms) : undefined,
+            images,
+            boundary: boundary || undefined,
+            boundarySource: boundary ? boundarySource || "manual" : undefined,
+          };
+          // strip undefined (Firestore can't store undefined)
+          Object.keys(payload).forEach(
+            (k) => payload[k] === undefined && delete payload[k],
+          );
+
+          let savedId = id;
+          if (mode === "create") {
+            payload.createdBy = currentUserId;
+            savedId = await createProperty(payload);
+          } else {
+            await updateProperty(id, payload);
+          }
+
+          // In CREATE mode, persist deedDocs that were uploaded before the property existed
+          if (mode === "create" && deedDocs.length > 0) {
+            for (const doc of deedDocs) {
+              if (!doc.id) {
+                try {
+                  doc.id = await createPropertyDoc({
+                    propertyId: savedId,
+                    ...doc,
+                    createdBy: currentUserId,
+                  });
+                } catch (e) {
+                  console.warn("[deed save]", e);
+                }
+              }
+            }
+          }
+
+          // Non-blocking KML generation: generate → upload → store URL on property
+          if (boundary && boundary.geometry) {
+            _uploadKml(savedId, boundary, payload.title).catch((e) =>
+              console.warn("[kml]", e.message),
+            );
+          }
+
+          await logActivity({
+            action: mode === "create" ? "created" : "updated",
+            targetType: "property",
+            targetId: savedId,
+            userId: currentUserId,
+            meta: {title: payload.title?.en || payload.title?.ar},
+          });
+
+          toast(
+            mode === "create"
+              ? t("dashboard.createProperty") + " ✓"
+              : t("dashboard.saveChanges") + " ✓",
+          );
+          setTimeout(
+            () => window.location.replace("dashboard-properties.html"),
+            600,
+          );
+        } catch (err) {
+          errorEl.textContent = err.message || "Failed";
+          errorEl.classList.remove("hidden");
+          saveBtn.removeAttribute("disabled");
+          saveLabel.textContent = t("dashboard.save");
+        }
+      });
+
+      /* ─────────── Deed / Documents ─────────── */
+      /* ─── Boundary state ─── */
+      let boundary = null; // GeoJSON Feature or null
+      let boundarySource = null; // 'extracted' | 'manual' | 'imported'
+      let _pendingBoundaryPoints = []; // points from OCR waiting to apply
+
+      /* ─── Deed state ─── */
+      let deedDocs = []; // { id?, title, docType, fileUrl, fileName, fileSize, extracted, rawText, ocrMethod, boundaryPoints }
+      let _extractedData = {};
+      let _lastOcrResult = null;
+      let _currentPropertyId = id;
+
+      const deedDropZone = document.getElementById("deedDropZone");
+      const deedFileInput = document.getElementById("deedFileInput");
+      const deedExtracting = document.getElementById("deedExtracting");
+      const deedResult = document.getElementById("deedResult");
+      const deedFieldsGrid = document.getElementById("deedFieldsGrid");
+      const deedApplyAllBtn = document.getElementById("deedApplyAllBtn");
+      const deedImageNote = document.getElementById("deedImageNote");
+      const deedExtractError = document.getElementById("deedExtractError");
+      const deedExtractErrorMsg = document.getElementById(
+        "deedExtractErrorMsg",
+      );
+      const deedDocsList = document.getElementById("deedDocsList");
+
+      deedDropZone.addEventListener("click", () => deedFileInput.click());
+      deedDropZone.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") deedFileInput.click();
+      });
+      deedDropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        deedDropZone.classList.add("drag-over");
+      });
+      deedDropZone.addEventListener("dragleave", () =>
+        deedDropZone.classList.remove("drag-over"),
+      );
+      deedDropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        deedDropZone.classList.remove("drag-over");
+        if (e.dataTransfer.files.length) handleDeedFiles(e.dataTransfer.files);
+      });
+      deedFileInput.addEventListener("change", (e) => {
+        if (e.target.files.length) handleDeedFiles(e.target.files);
+        e.target.value = "";
+      });
+
+      async function handleDeedFiles(files) {
+        for (const file of Array.from(files)) {
+          await processDeedFile(file);
+        }
+      }
+
+      async function processDeedFile(file) {
+        // Reset state
+        deedExtracting.classList.remove("hidden");
+        deedResult.classList.add("hidden");
+        deedImageNote.classList.add("hidden");
+        deedExtractError.classList.add("hidden");
+
+        // Upload to Cloudinary
+        let fileUrl = "";
+        try {
+          const res = await uploadToCloudinary(file, {
+            folder: "virea/deeds",
+            resourceType: "auto",
+            onProgress: () => {},
+          });
+          fileUrl = typeof res === "string" ? res : res.secure_url || "";
+        } catch (err) {
+          deedExtracting.classList.add("hidden");
+          deedExtractError.classList.remove("hidden");
+          deedExtractErrorMsg.textContent = err.message;
+          return;
+        }
+
+        // Extract data (with OCR progress feedback)
+        let extracted = {};
+        let isImageOnly = false;
+        let boundaryPointsFromDeed = [];
+        try {
+          const result = await extractPropertyData(file, (status, pct) => {
+            const bar = document.getElementById("deedExtracting");
+            if (!bar.classList.contains("hidden")) {
+              const label = bar.querySelector("span:last-child");
+              if (label)
+                label.textContent =
+                  status === "ocr" ? `OCR… ${pct}%` : t("deed.extracting");
+            }
+          });
+          _lastOcrResult = result;
+          extracted = result.fields || {};
+          isImageOnly = result.isImageOnly;
+          boundaryPointsFromDeed = result.boundaryPoints || [];
+        } catch (err) {
+          console.warn("[deed extract]", err);
+        }
+
+        // Auto-apply polygon if 3+ valid coordinates extracted
+        if (boundaryPointsFromDeed.length >= 3) {
+          const vr = validatePolygon(boundaryPointsFromDeed);
+          if (vr.valid) {
+            boundary = buildGeoJSON(boundaryPointsFromDeed);
+            boundarySource = "extracted";
+            _pendingBoundaryPoints = [];
+            updateBoundaryUI();
+            // Immediately persist to Firestore if editing an existing property
+            if (_currentPropertyId) {
+              updatePropertyBoundary(
+                _currentPropertyId,
+                boundary,
+                "extracted",
+              ).catch((e) => console.warn("[boundary auto-save]", e));
+              _uploadKml(
+                _currentPropertyId,
+                boundary,
+                form.elements.title_ar.value ||
+                  form.elements.title_en.value ||
+                  "Property",
+              ).catch((e) => console.warn("[kml auto]", e));
+            }
+            toast(
+              t("boundary.autoExtracted") +
+                " — " +
+                boundaryPointsFromDeed.length +
+                " " +
+                t("boundary.pointsFound") +
+                " ✓",
+            );
+          } else {
+            // Fall back to pending — user clicks "Apply" button manually
+            _pendingBoundaryPoints = boundaryPointsFromDeed;
+            const noteEl = document.getElementById("boundaryAutoNote");
+            const msgEl = document.getElementById("boundaryAutoMsg");
+            noteEl.classList.remove("hidden");
+            msgEl.textContent =
+              t("boundary.autoExtracted") +
+              " — " +
+              boundaryPointsFromDeed.length +
+              " " +
+              t("boundary.pointsFound");
+            applyTranslations(noteEl);
+          }
+        }
+
+        deedExtracting.classList.add("hidden");
+
+        // Add to local docs list
+        const docEntry = {
+          title: file.name,
+          docType: "deed",
+          fileUrl,
+          fileName: file.name,
+          fileSize: file.size,
+          extracted,
+          // OCR audit trail stored for review and future re-processing
+          rawText: (_lastOcrResult?.rawText || "").substring(0, 50000),
+          ocrMethod: _lastOcrResult?.ocrMethod || "none",
+          boundaryPoints: boundaryPointsFromDeed,
+        };
+        deedDocs.push(docEntry);
+
+        // Save to Firestore immediately when editing an existing property
+        if (_currentPropertyId) {
+          try {
+            const savedId = await createPropertyDoc({
+              propertyId: _currentPropertyId,
+              ...docEntry,
+              createdBy: currentUserId,
+            });
+            docEntry.id = savedId;
+          } catch (err) {
+            console.warn("[deed save]", err);
+          }
+        }
+
+        renderDeedDocs();
+
+        // Show extraction results
+        if (isImageOnly) {
+          deedImageNote.classList.remove("hidden");
+        } else if (Object.keys(extracted).length > 0) {
+          _extractedData = extracted;
+          renderExtractedFields(extracted);
+          deedResult.classList.remove("hidden");
+        }
+      }
+
+      function renderExtractedFields(fields) {
+        const fieldDefs = [
+          {key: "parcelNo", labelKey: "deed.parcelNo", formField: null},
+          {key: "blockNo", labelKey: "deed.parcelNo", formField: null},
+          {key: "ownerName", labelKey: "deed.ownerName", formField: null},
+          {key: "area", labelKey: "deed.extractedArea", formField: "areaSize"},
+          {
+            key: "location",
+            labelKey: "deed.extractedLocation",
+            formField: "location_ar",
+          },
+          {key: "lat", labelKey: "deed.extractedCoords", formField: "lat"},
+          {key: "lng", labelKey: "deed.extractedCoords", formField: "lng"},
+        ];
+
+        // Merge lat/lng display
+        const displayFields = [];
+        if (fields.lat && fields.lng) {
+          displayFields.push({
+            key: "coords",
+            label: t("deed.extractedCoords"),
+            value: `${fields.lat}, ${fields.lng}`,
+            applyFn: () => {
+              form.elements.lat.value = fields.lat;
+              form.elements.lng.value = fields.lng;
+              refreshMapPreview();
+            },
+          });
+        }
+        for (const def of fieldDefs) {
+          if (def.key === "lat" || def.key === "lng") continue;
+          const val = fields[def.key];
+          if (!val) continue;
+          displayFields.push({
+            key: def.key,
+            label: t(def.labelKey),
+            value: String(val),
+            applyFn: def.formField
+              ? () => {
+                  const el = form.elements[def.formField];
+                  if (el) {
+                    el.value = val;
+                  }
+                }
+              : null,
+          });
+        }
+
+        deedFieldsGrid.innerHTML = displayFields
+          .map(
+            (f, i) => `
+          <div class="deed-field-row">
+            <div class="deed-field-info">
+              <p class="deed-field-label">${escapeHtml(f.label)}</p>
+              <p class="deed-field-value">${escapeHtml(f.value)}</p>
+            </div>
+            ${f.applyFn ? `<button type="button" class="deed-apply-btn" data-field-idx="${i}" data-i18n="deed.apply"></button>` : ""}
+          </div>
+        `,
+          )
+          .join("");
+
+        deedFieldsGrid.querySelectorAll(".deed-apply-btn").forEach((btn) => {
+          const idx = parseInt(btn.getAttribute("data-field-idx"), 10);
+          btn.addEventListener("click", () => {
+            if (displayFields[idx]?.applyFn) {
+              displayFields[idx].applyFn();
+              btn.textContent = "✓";
+              btn.disabled = true;
+            }
+          });
+        });
+
+        // Store for apply-all
+        deedApplyAllBtn._fields = displayFields;
+        applyTranslations(deedFieldsGrid);
+        applyTranslations(deedApplyAllBtn.parentElement);
+      }
+
+      deedApplyAllBtn.addEventListener("click", () => {
+        const fields = deedApplyAllBtn._fields || [];
+        fields.forEach((f) => {
+          if (f.applyFn) f.applyFn();
+        });
+        toast(t("deed.applyAll") + " ✓");
+        deedResult.classList.add("hidden");
+      });
+
+      function renderDeedDocs() {
+        if (!deedDocs.length) {
+          deedDocsList.innerHTML = "";
+          return;
+        }
+        const typeLabel = (t) =>
+          ({
+            deed: t("deed.docTypeDeed"),
+            plan: t("deed.docTypePlan"),
+            other: t("deed.docTypeOther"),
+          })[t] || t;
+        deedDocsList.innerHTML = `
+          <p class="field-label" style="margin-top:0.5rem;" data-i18n="deed.docs"></p>
+          <div class="deed-docs-list">
+            ${deedDocs
+              .map(
+                (doc, i) => `
+              <div class="deed-doc-row">
+                <div class="deed-doc-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div class="deed-doc-meta">
+                  <p class="deed-doc-name">${escapeHtml(doc.fileName || doc.title)}</p>
+                  <p class="deed-doc-type">${escapeHtml(typeLabel(doc.docType || "deed"))}</p>
+                </div>
+                <div class="deed-doc-actions">
+                  <a href="${escapeHtml(doc.fileUrl)}" target="_blank" rel="noopener" class="icon-btn" title="View">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </a>
+                  <button type="button" class="icon-btn danger" data-deed-idx="${i}" title="${escapeHtml(t("deed.deleteDoc"))}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </div>
+              </div>
+            `,
+              )
+              .join("")}
+          </div>
+        `;
+        deedDocsList.querySelectorAll("[data-deed-idx]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const idx = parseInt(btn.getAttribute("data-deed-idx"), 10);
+            const doc = deedDocs[idx];
+            if (!doc) return;
+            if (!confirm(t("deed.deleteDoc") + "?")) return;
+            if (doc.id) {
+              try {
+                await deletePropertyDoc(doc.id);
+              } catch {}
+            }
+            deedDocs.splice(idx, 1);
+            renderDeedDocs();
+          });
+        });
+        applyTranslations(deedDocsList);
+      }
+
+      async function loadDeedDocs() {
+        if (!id) return;
+        try {
+          const docs = await listPropertyDocs(id);
+          deedDocs = docs.map((d) => ({...d}));
+          renderDeedDocs();
+        } catch {}
+      }
+
+      /* ─────────── KML auto-upload ─────────── */
+
+      async function _uploadKml(propertyId, boundaryFeature, titleObj) {
+        const name =
+          typeof titleObj === "object"
+            ? titleObj.en || titleObj.ar || "Property"
+            : titleObj || "Property";
+        const kmlStr = geoJSONToKML(boundaryFeature, name);
+        const kmlFile = new File([kmlStr], "boundary.kml", {
+          type: "application/vnd.google-earth.kml+xml",
+        });
+        const res = await uploadToCloudinary(kmlFile, {
+          folder: "virea/kml",
+          resourceType: "raw",
+        });
+        const kmlUrl = typeof res === "string" ? res : res?.secure_url;
+        if (kmlUrl) await updateProperty(propertyId, {kmlUrl});
+      }
+
+      /* ─────────── Boundary Map (Leaflet mini map) ─────────── */
+
+      let boundaryMap = null;
+      let drawnItems = null;
+      let drawControl = null;
+      let existingPolyLayer = null;
+      let isDrawing = false;
+
+      function initBoundaryMap() {
+        if (boundaryMap) return;
+        boundaryMap = L.map("boundaryMapCanvas", {
+          center: [22.5, 57.5],
+          zoom: 6,
+          zoomControl: true,
+        });
+
+        // Satellite tiles
+        L.tileLayer(
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          {maxZoom: 20, attribution: "&copy; Esri, Maxar"},
+        ).addTo(boundaryMap);
+        L.tileLayer(
+          "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+          {maxZoom: 20, attribution: "", pane: "overlayPane"},
+        ).addTo(boundaryMap);
+
+        drawnItems = new L.FeatureGroup().addTo(boundaryMap);
+
+        drawControl = new L.Control.Draw({
+          draw: {
+            polygon: {
+              shapeOptions: {color: "#2563eb", weight: 2.5, fillOpacity: 0.18},
+              allowIntersection: false,
+              showArea: true,
+            },
+            rectangle: false,
+            circle: false,
+            marker: false,
+            polyline: false,
+            circlemarker: false,
+          },
+          edit: {featureGroup: drawnItems, remove: false},
+        });
+
+        boundaryMap.on(L.Draw.Event.CREATED, (e) => {
+          drawnItems.clearLayers();
+          if (existingPolyLayer) {
+            boundaryMap.removeLayer(existingPolyLayer);
+            existingPolyLayer = null;
+          }
+          drawnItems.addLayer(e.layer);
+          const pts = e.layer
+            .getLatLngs()[0]
+            .map((ll) => ({lat: ll.lat, lng: ll.lng}));
+          const vr = validatePolygon(pts);
+          if (vr.valid) {
+            boundary = buildGeoJSON(pts);
+            boundarySource = "manual";
+            updateBoundaryUI();
+            stopDrawMode();
+          } else {
+            toast(t("boundary.validationError") + ": " + vr.error);
+          }
+        });
+      }
+
+      function showBoundaryOnMap(geoFeature) {
+        if (!boundaryMap) initBoundaryMap();
+        if (existingPolyLayer) {
+          boundaryMap.removeLayer(existingPolyLayer);
+          existingPolyLayer = null;
+        }
+        drawnItems.clearLayers();
+        existingPolyLayer = L.geoJSON(geoFeature, {
+          style: {
+            color: "#2563eb",
+            weight: 2.5,
+            fillColor: "#2563eb",
+            fillOpacity: 0.18,
+          },
+        }).addTo(boundaryMap);
+        try {
+          const b = existingPolyLayer.getBounds();
+          if (b.isValid())
+            boundaryMap.fitBounds(b, {padding: [30, 30], maxZoom: 18});
+        } catch {}
+      }
+
+      function refreshBoundaryMap() {
+        if (!boundaryMap) initBoundaryMap();
+        if (boundary && boundary.geometry) {
+          showBoundaryOnMap(boundary);
+        } else {
+          // Center on property coordinates if available
+          const lat = form.elements.lat.value,
+            lng = form.elements.lng.value;
+          if (lat !== "" && lng !== "")
+            boundaryMap.setView([Number(lat), Number(lng)], 15);
+          if (existingPolyLayer) {
+            boundaryMap.removeLayer(existingPolyLayer);
+            existingPolyLayer = null;
+          }
+          drawnItems.clearLayers();
+        }
+      }
+
+      function updateBoundaryUI() {
+        const indicator = document.getElementById("boundaryStatusIndicator");
+        const meta = document.getElementById("boundaryStatusMeta");
+        const clearBtn = document.getElementById("boundaryClearBtn");
+        const kmlBtn = document.getElementById("boundaryKmlBtn");
+        const areaBadge = document.getElementById("boundaryAreaBadge");
+
+        if (boundary && boundary.geometry) {
+          indicator.classList.add("has-boundary");
+          indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="boundary.hasBoundary"></span>`;
+          const pts = geoJSONToPoints(boundary);
+          const area = polygonAreaM2(pts);
+          if (area > 0) {
+            areaBadge.textContent = formatArea(area);
+            areaBadge.classList.remove("hidden");
+          }
+          // Source badge
+          const srcLabel =
+            boundarySource === "extracted"
+              ? t("boundary.sourceExtracted")
+              : boundarySource === "imported"
+                ? t("boundary.sourceImported")
+                : t("boundary.sourceManual");
+          meta.textContent =
+            srcLabel + " · " + pts.length + " " + t("boundary.boundaryPoints");
+          meta.classList.remove("hidden");
+          clearBtn.classList.remove("hidden");
+          kmlBtn.classList.remove("hidden");
+          refreshBoundaryMap();
+          // Oman bounds check
+          const omanWarn = document.getElementById("boundaryOmanWarning");
+          const outsideOman = pts.some((p) => !isWithinOman(p.lat, p.lng));
+          omanWarn.classList.toggle("hidden", !outsideOman);
+        } else {
+          indicator.classList.remove("has-boundary");
+          indicator.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span data-i18n="boundary.noBoundary"></span>`;
+          meta.classList.add("hidden");
+          clearBtn.classList.add("hidden");
+          kmlBtn.classList.add("hidden");
+          areaBadge.classList.add("hidden");
+          document
+            .getElementById("boundaryOmanWarning")
+            .classList.add("hidden");
+        }
+        applyTranslations(document.getElementById("boundarySection"));
+      }
+
+      function startDrawMode() {
+        if (!boundaryMap) initBoundaryMap();
+        isDrawing = true;
+        if (drawControl && !boundaryMap.hasControl(drawControl))
+          boundaryMap.addControl(drawControl);
+        document
+          .getElementById("boundaryDrawBtn")
+          .querySelector("span").textContent = t("boundary.editBoundary");
+        document.getElementById("boundaryDrawHint").style.display = "block";
+        document
+          .getElementById("boundaryMapCanvas")
+          .parentElement.classList.add("boundary-draw-active");
+        boundaryMap.invalidateSize();
+      }
+
+      function stopDrawMode() {
+        isDrawing = false;
+        if (drawControl && boundaryMap && boundaryMap.hasControl(drawControl))
+          boundaryMap.removeControl(drawControl);
+        document
+          .getElementById("boundaryDrawBtn")
+          .querySelector("span").textContent = t("boundary.drawBoundary");
+        document.getElementById("boundaryDrawHint").style.display = "none";
+        document
+          .getElementById("boundaryMapCanvas")
+          .parentElement.classList.remove("boundary-draw-active");
+      }
+
+      // Init the mini map on page load (lazy — map won't render until visible)
+      setTimeout(() => {
+        initBoundaryMap();
+      }, 500);
+
+      document
+        .getElementById("boundaryDrawBtn")
+        .addEventListener("click", () => {
+          if (isDrawing) stopDrawMode();
+          else startDrawMode();
+        });
+
+      document
+        .getElementById("boundaryClearBtn")
+        .addEventListener("click", () => {
+          if (!confirm(t("boundary.clearBoundary") + "?")) return;
+          boundary = null;
+          boundarySource = null;
+          drawnItems.clearLayers();
+          if (existingPolyLayer) {
+            boundaryMap.removeLayer(existingPolyLayer);
+            existingPolyLayer = null;
+          }
+          updateBoundaryUI();
+        });
+
+      document
+        .getElementById("boundaryApplyExtracted")
+        .addEventListener("click", () => {
+          if (_pendingBoundaryPoints.length >= 3) {
+            const vr = validatePolygon(_pendingBoundaryPoints);
+            if (vr.valid) {
+              boundary = buildGeoJSON(_pendingBoundaryPoints);
+              boundarySource = "extracted";
+              document
+                .getElementById("boundaryAutoNote")
+                .classList.add("hidden");
+              updateBoundaryUI();
+              toast(t("boundary.hasBoundary") + " ✓");
+            } else {
+              toast(t("boundary.validationError") + ": " + vr.error);
+            }
+          }
+        });
+
+      document
+        .getElementById("boundaryKmlBtn")
+        .addEventListener("click", () => {
+          if (!boundary) return;
+          const lang = document.documentElement.lang || "ar";
+          const propTitle =
+            form.elements.title_ar.value ||
+            form.elements.title_en.value ||
+            "Property";
+          const kml = geoJSONToKML(boundary, propTitle);
+          const blob = new Blob([kml], {
+            type: "application/vnd.google-earth.kml+xml",
+          });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = (propTitle || "boundary") + ".kml";
+          a.click();
+          URL.revokeObjectURL(a.href);
+        });
+
+      (async () => {
+        const ctx = await setupDashboard("dashboard-properties.html", {
+          require: mode === "create" ? "properties.create" : "properties.edit",
+        });
+        currentUserId = ctx.user.uid;
+        _currentPropertyId = id;
+        applyTranslations();
+        await loadExisting();
+        updateBoundaryUI();
+        loadDeedDocs();
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script src="assets/js/animations.js"></script>
+  </body>
+</html>

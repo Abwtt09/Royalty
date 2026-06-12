@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "virea-fa2f8"
+  },
+  "targets": {
+    "virea-fa2f8": {
+      "hosting": {
+        "royalty-real": ["royalty-real"]
+      }
+    }
+  }
+}

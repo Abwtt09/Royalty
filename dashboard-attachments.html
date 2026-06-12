@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://firestore.googleapis.com"
+      crossorigin
+    />
+    <link rel="dns-prefetch" href="https://api.cloudinary.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js"
+    />
+    <link
+      rel="modulepreload"
+      href="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js"
+    />
+    <link rel="modulepreload" href="assets/js/firebase-config.js" />
+    <link rel="modulepreload" href="assets/js/auth.js" />
+    <link rel="modulepreload" href="assets/js/firestore.js" />
+    <link rel="modulepreload" href="assets/js/i18n.js" />
+    <link rel="modulepreload" href="assets/js/ui.js?v=2" />
+    <title>الملحقات · Royalty Real Estate</title>
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" href="assets/img/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/dashboard.css" />
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <main class="dashboard-main">
+      <header class="dashboard-header">
+        <p class="eyebrow" data-i18n="dashboard.attachmentsEyebrow"></p>
+        <h1 data-i18n="dashboard.attachmentsTitle"></h1>
+        <p data-i18n="dashboard.attachmentsDescription"></p>
+      </header>
+
+      <section class="form-section mb-5" data-role-require="attachments.write">
+        <h3 data-i18n="dashboard.attachmentsUpload"></h3>
+        <form
+          id="attachmentForm"
+          style="display: flex; flex-direction: column; gap: 1.25rem"
+        >
+          <div class="form-grid form-grid-2">
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.attachmentTitle"
+              ></label>
+              <input class="field-input" name="title" type="text" required />
+            </div>
+            <div class="field-group">
+              <label
+                class="field-label"
+                data-i18n="dashboard.attachmentCategory"
+              ></label>
+              <select class="field-select" name="category">
+                <option
+                  value="letter"
+                  data-i18n="dashboard.attachmentCategoryLetter"
+                ></option>
+                <option
+                  value="contract"
+                  data-i18n="dashboard.attachmentCategoryContract"
+                ></option>
+                <option
+                  value="form"
+                  data-i18n="dashboard.attachmentCategoryForm"
+                ></option>
+                <option
+                  value="other"
+                  data-i18n="dashboard.attachmentCategoryOther"
+                ></option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label
+              class="field-label"
+              data-i18n="dashboard.attachmentNote"
+            ></label>
+            <textarea class="field-textarea" name="note" rows="2"></textarea>
+          </div>
+          <div class="field-group">
+            <label
+              class="field-label"
+              data-i18n="dashboard.attachmentFile"
+            ></label>
+            <input
+              class="field-input"
+              type="file"
+              name="file"
+              id="fileInput"
+              required
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.webp"
+            />
+            <span
+              class="field-hint"
+              data-i18n="dashboard.attachmentAccept"
+            ></span>
+          </div>
+          <p class="field-error hidden" id="uploadError"></p>
+          <p class="uploader-progress hidden num" id="uploadProgress">0%</p>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            id="saveAttBtn"
+            style="align-self: flex-start"
+          >
+            <span id="saveAttLabel" data-i18n="dashboard.attachmentSave"></span>
+          </button>
+        </form>
+      </section>
+
+      <div class="table-card" id="attachmentsTable">
+        <div class="loading-state"><span class="spinner"></span></div>
+      </div>
+    </main>
+
+    <script type="module">
+      import {
+        initI18n,
+        applyTranslations,
+        onLangChange,
+        t,
+        getLang,
+      } from "./assets/js/i18n.js";
+      import {setupDashboard, toast} from "./assets/js/dashboard-ui.js";
+      import {
+        listAttachments,
+        createAttachment,
+        deleteAttachment,
+        logActivity,
+      } from "./assets/js/firestore.js";
+      import {
+        uploadToCloudinary,
+        isCloudinaryConfigured,
+      } from "./assets/js/cloudinary.js";
+      import {formatDate, escapeHtml} from "./assets/js/ui.js?v=2";
+
+      initI18n();
+
+      let items = [];
+      let currentRole = "viewer";
+      let currentUserId = null;
+
+      function fmtBytes(b) {
+        if (!b && b !== 0) return "—";
+        if (b < 1024) return b + " B";
+        if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+        return (b / 1024 / 1024).toFixed(1) + " MB";
+      }
+
+      function categoryLabel(cat) {
+        const k =
+          {
+            letter: "dashboard.attachmentCategoryLetter",
+            contract: "dashboard.attachmentCategoryContract",
+            form: "dashboard.attachmentCategoryForm",
+            other: "dashboard.attachmentCategoryOther",
+          }[cat] || "dashboard.attachmentCategoryOther";
+        return t(k);
+      }
+
+      function render() {
+        const wrap = document.getElementById("attachmentsTable");
+        if (items.length === 0) {
+          wrap.innerHTML = `<div class="empty-state" data-i18n="dashboard.noAttachments"></div>`;
+          applyTranslations(wrap);
+          return;
+        }
+        wrap.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="dashboard.attachmentTitle"></th>
+                <th data-i18n="dashboard.attachmentCategory"></th>
+                <th class="desktop-only" data-i18n="dashboard.attachmentSize"></th>
+                <th class="desktop-only" data-i18n="dashboard.tableCreated"></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items
+                .map(
+                  (it) => `
+                <tr>
+                  <td>
+                    <p style="font-size:0.875rem;font-weight:500;color:var(--ink-900);">${escapeHtml(it.title)}</p>
+                    ${it.note ? `<p style="font-size:0.75rem;color:var(--ink-500);margin-top:0.25rem;">${escapeHtml(it.note)}</p>` : ""}
+                    <p class="num" style="font-size:0.7rem;color:var(--ink-400);margin-top:0.25rem;text-transform:uppercase;">${escapeHtml((it.fileType || "").toUpperCase())}</p>
+                  </td>
+                  <td><span class="badge badge-muted">${escapeHtml(categoryLabel(it.category))}</span></td>
+                  <td class="desktop-only num" style="font-size:0.875rem;color:var(--ink-700);">${escapeHtml(fmtBytes(it.fileSize))}</td>
+                  <td class="desktop-only" style="font-size:0.75rem;color:var(--ink-500);">${it.createdAt ? escapeHtml(formatDate(it.createdAt)) : "—"}</td>
+                  <td>
+                    <div class="table-actions">
+                      <a class="icon-btn" href="${escapeHtml(it.fileUrl)}" target="_blank" rel="noreferrer" download aria-label="Download">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      </a>
+                      <button class="icon-btn danger" data-del="${escapeHtml(it.id)}" data-role-require="attachments.delete" aria-label="Delete">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        `;
+        applyTranslations(wrap);
+        import("./assets/js/roles.js").then((m) =>
+          m.applyRoleGuards(wrap, currentRole),
+        );
+
+        wrap.querySelectorAll("[data-del]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-del");
+            if (!confirm(t("dashboard.attachmentDeleteConfirm"))) return;
+            try {
+              await deleteAttachment(id);
+              await logActivity({
+                action: "deleted",
+                targetType: "attachment",
+                targetId: id,
+                userId: currentUserId,
+              });
+              items = items.filter((x) => x.id !== id);
+              render();
+            } catch (e) {
+              alert(e.message);
+            }
+          }),
+        );
+      }
+
+      async function load() {
+        try {
+          items = await listAttachments();
+        } catch (e) {
+          console.error(e);
+          items = [];
+        }
+        render();
+      }
+
+      // Upload form
+      const form = document.getElementById("attachmentForm");
+      const errorEl = document.getElementById("uploadError");
+      const progressEl = document.getElementById("uploadProgress");
+      const saveBtn = document.getElementById("saveAttBtn");
+      const saveLabel = document.getElementById("saveAttLabel");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!isCloudinaryConfigured()) {
+          errorEl.textContent = "Upload service unavailable.";
+          errorEl.classList.remove("hidden");
+          return;
+        }
+        const file = document.getElementById("fileInput").files?.[0];
+        if (!file) return;
+
+        errorEl.classList.add("hidden");
+        saveBtn.setAttribute("disabled", "");
+        progressEl.classList.remove("hidden");
+        progressEl.textContent = "0%";
+        try {
+          // Cloudinary `auto` resource type handles PDF/DOCX/images uniformly.
+          const result = await uploadToCloudinary(file, {
+            folder: "royalty/attachments",
+            resourceType: "auto",
+            onProgress: (p) => {
+              progressEl.textContent = Math.round(p) + "%";
+            },
+          });
+          const payload = {
+            title: form.elements.title.value.trim(),
+            category: form.elements.category.value,
+            note: form.elements.note.value.trim() || null,
+            fileUrl: result.secure_url,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: (file.name.split(".").pop() || "").toLowerCase(),
+            createdBy: currentUserId,
+          };
+          const id = await createAttachment(payload);
+          await logActivity({
+            action: "created",
+            targetType: "attachment",
+            targetId: id,
+            userId: currentUserId,
+            meta: {title: payload.title},
+          });
+          form.reset();
+          toast("✓");
+          load();
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.classList.remove("hidden");
+        } finally {
+          saveBtn.removeAttribute("disabled");
+          saveLabel.textContent = t("dashboard.attachmentSave");
+          progressEl.classList.add("hidden");
+        }
+      });
+
+      onLangChange(() => render());
+
+      (async () => {
+        const ctx = await setupDashboard("dashboard-attachments.html", {
+          require: "attachments.read",
+        });
+        currentRole = ctx.role;
+        currentUserId = ctx.user.uid;
+        applyTranslations();
+        load();
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+    <script src="assets/js/animations.js"></script>
+  </body>
+</html>

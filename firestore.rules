@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function role() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? userDoc().role
+        : null;
+    }
+
+    function disabled() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().get('disabled', false) == true;
+    }
+
+    // Legacy `admin` is treated as `admin_owner` (older docs from the early build).
+    function isOwner()   { return !disabled() && (role() == 'admin_owner' || role() == 'admin'); }
+    function isManager() { return !disabled() && (role() == 'manager' || isOwner()); }
+    function isEditor()  { return !disabled() && (role() == 'editor'  || isManager()); }
+    function isStaff()   { return !disabled() && (role() == 'viewer'  || isEditor()); }
+
+    // ── Properties ──
+    // Public read is intentional: the properties listing and satellite map are public-facing.
+    // All writes still require editor-level authentication.
+    match /properties/{id} {
+      allow read:   if true;
+      allow create, update: if isEditor();
+      allow delete: if isOwner();
+    }
+
+    // ── Attachments (letters, contracts, forms) ──
+    match /attachments/{id} {
+      allow read:   if isStaff();
+      allow create, update: if isEditor();
+      allow delete: if isOwner();
+    }
+
+    // ── Users / RBAC ──
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isOwner());
+
+      // Bootstrap: new users may create their own doc but only with role=viewer.
+      // Owners can create docs for other users with any role.
+      allow create: if isSignedIn() && (
+        (request.auth.uid == uid && request.resource.data.get('role', 'viewer') == 'viewer')
+        || isOwner()
+      );
+
+      allow update: if isSignedIn() && (
+        (request.auth.uid == uid && request.resource.data.role == resource.data.role)
+        || isOwner()
+      );
+
+      allow delete: if isOwner() && request.auth.uid != uid;
+    }
+
+    // ── Internal staff messages ──
+    match /messages/{id} {
+      allow create: if isStaff() && request.resource.data.fromUid == request.auth.uid;
+
+      allow read: if isStaff() && (
+        resource.data.toAll == true
+        || resource.data.fromUid == request.auth.uid
+        || (resource.data.toUids is list && request.auth.uid in resource.data.toUids)
+      );
+
+      // Recipients flip only readBy.{uid}
+      allow update: if isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+
+      allow delete: if isOwner() || (isStaff() && resource.data.fromUid == request.auth.uid);
+    }
+
+    // ── Activity log (append-only by staff) ──
+    match /logs/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── Property deed / plan documents ──
+    match /propertyDocs/{id} {
+      allow read:   if isStaff();
+      allow create: if isEditor()
+                    && request.resource.data.propertyId is string
+                    && request.resource.data.propertyId.size() > 0;
+      allow update: if isEditor();
+      allow delete: if isManager();
+    }
+
+    // ── Custom databases (schema + records) ──
+    // Schema (field definitions) lives in the parent doc; records in the subcollection.
+    match /databases/{dbId} {
+      allow read:   if isStaff();
+      allow create: if isEditor();
+      allow update: if isEditor();
+      allow delete: if isManager();
+
+      match /records/{recordId} {
+        allow read:   if isStaff();
+        allow create: if isEditor();
+        allow update: if isEditor();
+        allow delete: if isEditor();
+      }
+    }
+  }
+}
